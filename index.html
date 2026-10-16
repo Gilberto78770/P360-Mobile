@@ -1,0 +1,648 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P360 Mobile</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: #edf1f6;
+  font-family: Arial, sans-serif;
+  color: #26344b;
+}
+.app {
+  max-width: 430px;
+  min-height: 100vh;
+  margin: auto;
+  padding: 24px 20px;
+  background: white;
+}
+h1 { font-size: 26px; }
+h2 { font-size: 21px; }
+small { color: #69788b; }
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+.principal {
+  width: 100%;
+  padding: 24px;
+  margin: 25px 0;
+  border: 0;
+  border-radius: 16px;
+  background: #254c83;
+  color: white;
+  font-size: 21px;
+  font-weight: bold;
+}
+.menu {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.menu button {
+  padding: 20px 8px;
+  min-height: 90px;
+  background: #f5f7fa;
+  border: 1px solid #dce3ed;
+  border-radius: 12px;
+}
+.page { display: none; }
+.page.active { display: block; }
+label {
+  display: block;
+  margin: 15px 0 6px;
+  font-weight: bold;
+  font-size: 14px;
+}
+input, select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  font-size: 16px;
+  background: white;
+}
+.ligne {
+  display: flex;
+  gap: 10px;
+}
+.ligne > div { flex: 1; min-width: 0; }
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+}
+.actions button {
+  flex: 1;
+  padding: 14px 8px;
+  border-radius: 10px;
+  border: 0;
+  font-weight: bold;
+}
+.enregistrer {
+  background: #254c83;
+  color: white;
+}
+.retour { background: #e8edf4; }
+.operation {
+  padding: 14px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+.operation strong { display: block; }
+.operation span {
+  display: block;
+  margin-top: 5px;
+  font-size: 13px;
+  color: #69788b;
+}
+.montant {
+  font-weight: bold;
+  margin-top: 7px;
+}
+.debit { color: #bd3747; }
+.credit { color: #19805a; }
+</style>
+
+<link rel="manifest" href="./manifest.json">
+
+<link rel="apple-touch-icon" href="./p360-apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="P360 Mobile">
+
+</head>
+<body>
+<main class="app">
+
+<section id="accueil" class="page active">
+  <small>PATRIMOINE 360</small>
+  <h1>Bienvenue 👋</h1>
+
+  <button class="principal"
+    onclick="afficher('saisie')">
+    ＋ Nouvelle opération
+  </button>
+
+  <div class="menu">
+    <button onclick="afficher('attente')">
+      📋 Opérations en attente
+    </button>
+    <button onclick="messageTest()">
+      🏦 Mes comptes
+    </button>
+    <button onclick="afficher('espagne')">
+    💳 CB Espagne
+    </button>
+    <button onclick="messageTest()">
+      🔄 Synchronisation
+    </button>
+  </div>
+</section>
+
+<section id="saisie" class="page">
+  <small>P360 MOBILE</small>
+  <h2>Nouvelle opération</h2>
+
+  <form id="formulaire">
+    <label for="compte">Compte</label>
+    <select id="compte" required>
+      <option>Courant</option>
+      <option>Joint</option>
+      <option>Espagne</option>
+      <option>Blois</option>
+      <option>Orléans</option>
+      <option>Oney</option>
+    </select>
+
+    <div class="ligne">
+      <div>
+        <label for="type">Débit / Crédit</label>
+        <select id="type">
+          <option value="debit">Débit</option>
+          <option value="credit">Crédit</option>
+        </select>
+      </div>
+      <div>
+        <label for="montant">Montant (€)</label>
+        <input id="montant" type="number"
+          min="0.01" step="0.01"
+          placeholder="0,00" required>
+      </div>
+    </div>
+
+    <label for="date">Date</label>
+    <input id="date" type="date" required>
+
+    <label for="tiers">Tiers / Commerçant</label>
+    <input id="tiers" type="text"
+      placeholder="Ex. Carrefour" required>
+
+    <label for="categorie">Catégorie</label>
+    <input id="categorie" type="text"
+      placeholder="Ex. Courses" required>
+
+    <label for="paiement">Mode de paiement</label>
+    <select id="paiement">
+      <option>Carte Bancaire</option>
+      <option>Espèces</option>
+      <option>Virement</option>
+      <option>Prélèvement</option>
+      <option>Chèque</option>
+    </select>
+
+    <label for="payePar">Payé par</label>
+    <input id="payePar" type="text"
+      placeholder="À renseigner">
+
+    <div class="actions">
+      <button type="button" class="retour"
+        onclick="afficher('accueil')">
+        Annuler
+      </button>
+      <button type="submit" class="enregistrer">
+        Enregistrer
+      </button>
+    </div>
+  </form>
+</section>
+
+<section id="recapEspagne" class="page">
+  <small>P360 MOBILE · ESPAGNE</small>
+
+  <h2>✅ Opération enregistrée</h2>
+
+  <p>Votre dépense par carte bancaire a bien été enregistrée.</p>
+
+  <div id="detailsRecapEspagne">
+    <p>Montant de l'opération : —</p>
+    <p>Total des dépenses du mois : —</p>
+    <p>Disponible sur le plafond : —</p>
+  </div>
+
+  <div class="actions">
+    <button class="retour"
+      onclick="afficher('accueil')">
+      Retour à l'accueil
+    </button>
+  </div>
+</section>
+
+<section id="espagne" class="page">
+  <small>P360 MOBILE · ESPAGNE</small>
+  <h2>💳 Suivi CB Espagne</h2>
+
+  <p>Plafond mensuel de la carte bancaire</p>
+
+  <h1>1 000 €</h1>
+
+  <div id="suiviEspagne">
+    <p>Dépenses du mois : calcul à venir</p>
+    <p>Disponible : calcul à venir</p>
+  </div>
+
+  <p>
+    🔔 Alertes prévues à 800 € et 900 €.
+  </p>
+
+  <div class="actions">
+    <button class="retour"
+      onclick="afficher('accueil')">
+      Retour à l'accueil
+    </button>
+  </div>
+</section>
+
+
+<section id="attente" class="page">
+  <small>P360 MOBILE</small>
+  <h2>Opérations en attente</h2>
+  <p id="compteur"></p>
+  <div id="liste"></div>
+  <div class="actions">
+    <button class="retour"
+      onclick="afficher('accueil')">
+      Retour à l'accueil
+    </button>
+  </div>
+</section>
+
+</main>
+
+<script>
+const CLE = "p360_mobile_operations_test";
+let operationEnModification = null;
+const $ = id => document.getElementById(id);
+
+function lireOperations() {
+  try {
+    return JSON.parse(localStorage.getItem(CLE)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function afficher(page) {
+  document.querySelectorAll(".page").forEach(
+    element => element.classList.remove("active")
+  );
+  $(page).classList.add("active");
+
+  if (page === "saisie") {
+  $("date").value ||= dateLocale();
+
+  if (operationEnModification === null) {
+    $("compte").value =
+      localStorage.getItem("p360_dernier_compte") || "Courant";
+  }
+}
+   
+  
+
+  if (page === "attente") afficherOperations();
+  if (page === "espagne") calculerCBEspagne();
+}
+
+function dateLocale() {
+  const d = new Date();
+  const annee = d.getFullYear();
+  const mois = String(d.getMonth() + 1).padStart(2, "0");
+  const jour = String(d.getDate()).padStart(2, "0");
+  return `${annee}-${mois}-${jour}`;
+}
+
+function afficherOperations() {
+  const operations = lireOperations();
+  $("compteur").textContent =
+    `${operations.length} opération(s) enregistrée(s)`;
+
+  $("liste").replaceChildren();
+
+  operations.slice().reverse().forEach(op => {
+    const bloc = document.createElement("div");
+    bloc.className = "operation";
+
+    const titre = document.createElement("strong");
+    titre.textContent = op.tiers;
+
+    const details = document.createElement("span");
+    details.textContent =
+      `${op.date} · ${op.compte} · ${op.categorie}`;
+
+    const montant = document.createElement("div");
+    montant.className =
+      "montant " + (op.type === "debit" ? "debit" : "credit");
+    montant.textContent =
+      (op.type === "debit" ? "−" : "+") +
+      op.montant.toFixed(2).replace(".", ",") + " €";
+
+    
+const boutons = document.createElement("div");
+boutons.className = "actions";
+
+const modifier = document.createElement("button");
+modifier.textContent = "✏️ Modifier";
+modifier.className = "retour";
+modifier.onclick = () => modifierOperation(op.id);
+
+const supprimer = document.createElement("button");
+supprimer.textContent = "🗑️ Supprimer";
+supprimer.className = "retour";
+supprimer.onclick = () => supprimerOperation(op.id);
+
+boutons.append(modifier, supprimer);
+bloc.append(titre, details, montant, boutons);
+
+    $("liste").append(bloc);
+  });
+}
+
+
+
+function supprimerOperation(id) {
+  const operations = lireOperations();
+  const operation = operations.find(op => op.id === id);
+
+  if (!operation) return;
+
+  const confirmation = confirm(
+    "Veux-tu vraiment supprimer cette opération de test ?"
+  );
+
+  if (!confirmation) return;
+
+  const nouvellesOperations = operations.filter(
+    op => op.id !== id
+  );
+
+  localStorage.setItem(
+    CLE,
+    JSON.stringify(nouvellesOperations)
+  );
+
+  afficherOperations();
+}
+
+function modifierOperation(id) {
+  const operations = lireOperations();
+  const operation = operations.find(op => op.id === id);
+
+  if (!operation) return;
+  operationEnModification = id;
+
+  $("compte").value = operation.compte;
+  $("type").value = operation.type;
+  $("montant").value = operation.montant;
+  $("date").value = operation.date;
+  $("tiers").value = operation.tiers;
+  $("categorie").value = operation.categorie;
+  $("paiement").value = operation.paiement;
+  $("payePar").value = operation.payePar;
+
+  alert(
+    "Les informations sont chargées dans le formulaire. " +
+    "Nous allons maintenant préparer leur enregistrement."
+  );
+
+  afficher("saisie");
+}
+ 
+function afficherRecapEspagne(operation) {
+  const operations = lireOperations();
+  const mois = operation.date.slice(0, 7);
+
+  const total = operations
+    .filter(op =>
+      op.compte === "Espagne" &&
+      op.paiement === "Carte Bancaire" &&
+      op.date.startsWith(mois)
+    )
+    .reduce((somme, op) =>
+      somme + (op.type === "debit" ? op.montant : -op.montant),
+      0
+    );
+
+  const disponible = 1000 - total;
+
+  const euros = valeur =>
+    valeur.toLocaleString("fr-FR", {
+      style: "currency",
+      currency: "EUR"
+    });
+
+  let alerte = "🟢 Plafond sous surveillance.";
+
+  if (total > 1000) {
+    alerte = "🔴 Attention : plafond dépassé !";
+  } else if (total >= 900) {
+    alerte = "🟠 Seuil de 900 € atteint !";
+  } else if (total >= 800) {
+    alerte = "🟡 Seuil de 800 € atteint !";
+  }
+
+  const zone = $("detailsRecapEspagne");
+  zone.replaceChildren();
+
+  [
+    "Montant de l'opération : " + euros(operation.montant),
+    "Dépenses du mois : " + euros(total),
+    "Disponible estimé : " + euros(disponible),
+    alerte
+  ].forEach(texte => {
+    const ligne = document.createElement("p");
+    ligne.textContent = texte;
+    zone.append(ligne);
+  });
+
+  afficher("recapEspagne");
+}
+
+function calculerCBEspagne() {
+  const operations = lireOperations();
+
+  const maintenant = new Date();
+  const mois = maintenant.getFullYear() + "-" +
+    String(maintenant.getMonth() + 1).padStart(2, "0");
+
+  const depenses = operations
+    .filter(op =>
+      op.compte === "Espagne" &&
+      op.paiement === "Carte Bancaire" &&
+      op.date.startsWith(mois)
+    )
+    .reduce((total, op) => {
+      return total + (
+        op.type === "debit" ? op.montant : -op.montant
+      );
+    }, 0);
+
+  const disponible = 1000 - depenses;
+
+  const euros = valeur =>
+    valeur.toLocaleString("fr-FR", {
+      style: "currency",
+      currency: "EUR"
+    });
+
+  let alerte = "🟢 Plafond sous surveillance.";
+
+  if (depenses > 1000) {
+    alerte = "🔴 Attention : plafond dépassé !";
+  } else if (depenses >= 900) {
+    alerte = "🟠 Alerte : seuil de 900 € atteint !";
+  } else if (depenses >= 800) {
+    alerte = "🟡 Alerte : seuil de 800 € atteint !";
+  }
+
+  const zone = $("suiviEspagne");
+  zone.replaceChildren();
+
+  const lignes = [
+    "Dépenses du mois : " + euros(depenses),
+    "Disponible estimé : " + euros(disponible),
+    alerte
+  ];
+
+  lignes.forEach(texte => {
+    const paragraphe = document.createElement("p");
+    paragraphe.textContent = texte;
+    zone.append(paragraphe);
+  });
+}
+
+  function messageTest() {
+  alert("Cette rubrique sera développée prochainement.");
+}
+
+
+
+$("formulaire").addEventListener("submit", evenement => {
+  evenement.preventDefault();
+
+
+  const montant = Number($("montant").value);
+
+  if (!Number.isFinite(montant) || montant <= 0) {
+    alert("Saisis un montant valide.");
+    return;
+  }
+
+  const operation = {
+    
+id: "test-" + Date.now() + "-" + Math.random().toString(36).slice(2),
+
+    compte: $("compte").value,
+    type: $("type").value,
+    montant: montant,
+    date: $("date").value,
+    tiers: $("tiers").value.trim(),
+    categorie: $("categorie").value.trim(),
+    paiement: $("paiement").value,
+    payePar: $("payePar").value.trim(),
+    statut: "en_attente"
+  };
+
+  const operations = lireOperations();
+
+if (
+  operation.compte === "Espagne" &&
+  operation.paiement === "Carte Bancaire" &&
+  operation.type === "debit"
+) {
+  const moisOperation = operation.date.slice(0, 7);
+
+  const totalActuel = operations
+    .filter(op =>
+      op.id !== operationEnModification &&
+      op.compte === "Espagne" &&
+      op.paiement === "Carte Bancaire" &&
+      op.date.startsWith(moisOperation)
+    )
+    .reduce((total, op) =>
+      total + (op.type === "debit" ? op.montant : -op.montant),
+      0
+    );
+
+  const nouveauTotal = totalActuel + operation.montant;
+
+  if (nouveauTotal > 1000) {
+    const continuer = confirm(
+      "⚠️ ATTENTION : PLAFOND CB ESPAGNE !\n\n" +
+      "Dépenses après cette opération : " +
+      nouveauTotal.toFixed(2) + " €\n" +
+      "Plafond mensuel : 1 000 €\n\n" +
+      "Veux-tu quand même enregistrer cette opération ?"
+    );
+
+    if (!continuer) {
+      
+  $("formulaire").reset();
+  $("date").value = dateLocale();
+  operationEnModification = null;
+  afficher("accueil");
+  return;
+}
+  }
+}
+
+
+if (operationEnModification !== null) {
+  const position = operations.findIndex(
+    op => op.id === operationEnModification
+  );
+
+  if (position === -1) {
+    alert("Opération introuvable. Modification annulée.");
+    return;
+  }
+
+  operation.id = operationEnModification;
+  operations[position] = operation;
+} else {
+  operations.push(operation);
+}
+
+  try {
+    localStorage.setItem(CLE, JSON.stringify(operations));
+    localStorage.setItem(
+      "p360_dernier_compte", operation.compte
+    );
+  } catch {
+    alert("Enregistrement impossible dans ce navigateur.");
+    return;
+  }
+
+  $("formulaire").reset();
+  operationEnModification = null;
+  $("date").value = dateLocale();
+  $("type").value = "debit";
+
+  if (
+  operation.compte === "Espagne" &&
+  operation.paiement === "Carte Bancaire" &&
+  operation.type === "debit"
+) {
+  afficherRecapEspagne(operation);
+} else {
+  alert("Opération enregistrée !");
+  afficher("attente");
+}
+ 
+});
+
+$("date").value = dateLocale();
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./service-worker.js")
+    .catch(erreur => {
+      console.log("Service worker non activé :", erreur);
+    });
+}
+</script>
+
+</body>
+</html>
