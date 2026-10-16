@@ -139,6 +139,9 @@ input, select {
     <button onclick="messageTest()">
       🔄 Synchronisation
     </button>
+    <button onclick="exporterSauvegarde()">
+  💾 Exporter une sauvegarde
+</button>
   </div>
 </section>
 
@@ -275,7 +278,37 @@ input, select {
 const CLE = "p360_mobile_operations_test";
 let operationEnModification = null;
 const $ = id => document.getElementById(id);
+function exporterSauvegarde() {
+  const operations = lireOperations();
 
+  if (operations.length === 0) {
+    alert("Aucune opération à sauvegarder.");
+    return;
+  }
+
+  const sauvegarde = {
+    application: "P360 Mobile",
+    version: 1,
+    dateExport: new Date().toISOString(),
+    operations: operations
+  };
+
+  const contenu = JSON.stringify(sauvegarde, null, 2);
+  const fichier = new Blob([contenu], {
+    type: "application/json"
+  });
+
+  const lien = document.createElement("a");
+  lien.href = URL.createObjectURL(fichier);
+  lien.download = "P360_Sauvegarde_" +
+    new Date().toISOString().slice(0, 10) + ".json";
+
+  document.body.appendChild(lien);
+  lien.click();
+  lien.remove();
+
+  setTimeout(() => URL.revokeObjectURL(lien.href), 1000);
+}
 function lireOperations() {
   try {
     return JSON.parse(localStorage.getItem(CLE)) || [];
