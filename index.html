@@ -141,6 +141,10 @@ input, select {
     </button>
     <button onclick="exporterSauvegarde()">
   💾 Exporter une sauvegarde
+  </button>
+  <button onclick="importerSauvegarde()">
+  📂 Importer une sauvegarde
+
 </button>
   </div>
 </section>
@@ -278,6 +282,117 @@ input, select {
 const CLE = "p360_mobile_operations_test";
 let operationEnModification = null;
 const $ = id => document.getElementById(id);
+function importerSauvegarde() {
+  const selecteur = document.createElement("input");
+  selecteur.type = "file";
+  selecteur.accept = ".json,application/json";
+
+  selecteur.addEventListener("change", function () {
+    const fichier = selecteur.files[0];
+
+   if (fichier) {
+  fichier.text().then(function (contenu) {
+    try {
+      const sauvegarde = JSON.parse(contenu);
+
+      if (
+        sauvegarde.application !== "P360 Mobile" ||
+        !Array.isArray(sauvegarde.operations)
+      ) {
+        alert("Ce fichier n'est pas une sauvegarde P360 valide.");
+        return;
+      }
+const comptesAutorises = [
+  "Courant", "Joint", "Espagne",
+  "Blois", "Orléans", "Oney"
+];
+
+const dateValide = date =>
+  typeof date === "string" &&
+  /^\d{4}-\d{2}-\d{2}$/.test(date) &&
+  !Number.isNaN(Date.parse(date)) &&
+  new Date(date + "T12:00:00").toISOString().slice(0, 10) === date;
+
+const operationsValides = sauvegarde.operations.every(op =>
+  op !== null &&
+  typeof op === "object" &&
+  !Array.isArray(op) &&
+  typeof op.id === "string" &&
+  op.id.trim() !== "" &&
+  comptesAutorises.includes(op.compte) &&
+  ["debit", "credit"].includes(op.type) &&
+  typeof op.montant === "number" &&
+  Number.isFinite(op.montant) &&
+  op.montant > 0 &&
+  dateValide(op.date) &&
+  typeof op.tiers === "string" &&
+  typeof op.categorie === "string" &&
+  typeof op.paiement === "string" &&
+  typeof op.payePar === "string"
+);
+
+if (!operationsValides) {
+  alert("Sauvegarde refusée : certaines opérations sont invalides.");
+  return;
+}
+const identifiantsSauvegarde = sauvegarde.operations.map(op => op.id);
+
+if (new Set(identifiantsSauvegarde).size !== identifiantsSauvegarde.length) {
+  alert("Sauvegarde refusée : des identifiants sont en double dans le fichier.");
+  return;
+}
+const operationsExistantes = lireOperations();
+const identifiantsExistants = new Set(operationsExistantes.map(op => op.id));
+const operationsNouvelles = sauvegarde.operations.filter(op => !identifiantsExistants.has(op.id));
+   alert(
+  "Sauvegarde reconnue !\n" +
+  "Nombre d'opérations dans le fichier : " + sauvegarde.operations.length + "\n" +
+  "Opérations nouvelles : " + operationsNouvelles.length
+); 
+ if (operationsNouvelles.length === 0) {
+  alert("Toutes les opérations sont déjà présentes. Aucun import nécessaire.");
+  return;
+}
+
+const confirmation = confirm(
+  "Voulez-vous restaurer " + operationsNouvelles.length +
+  " opération(s) manquante(s) ?"
+);
+
+if (!confirmation) {
+  alert("Restauration annulée. Aucune donnée modifiée.");
+  return;
+} 
+try {
+  const operationsFusionnees = [
+    ...operationsExistantes,
+    ...operationsNouvelles
+  ];
+
+  localStorage.setItem(
+    CLE,
+    JSON.stringify(operationsFusionnees)
+  );
+
+  alert(
+    "Restauration réussie !\n" +
+    operationsNouvelles.length + " opération(s) ajoutée(s)."
+  );
+} catch (erreur) {
+  alert("Erreur : la restauration n'a pas pu être enregistrée.");
+}
+    } catch (erreur) {
+      alert("Impossible de lire ce fichier JSON.");
+    }
+    }).catch(function () {
+    alert("Impossible d'ouvrir ce fichier.");
+  });
+  }
+
+  });
+
+  selecteur.click();
+}
 function exporterSauvegarde() {
   const operations = lireOperations();
 
