@@ -144,7 +144,9 @@ input, select {
   </button>
   <button onclick="importerSauvegarde()">
   📂 Importer une sauvegarde
-
+<button onclick="exporterVersExcel()">
+  📤 Exporter vers Patrimoine 360
+</button>
 </button>
   </div>
 </section>
@@ -424,6 +426,74 @@ function exporterSauvegarde() {
 
   setTimeout(() => URL.revokeObjectURL(lien.href), 1000);
 }
+
+function exporterVersExcel() {
+  const operations = lireOperations().filter(
+    op => op.statut === "en_attente"
+  );
+
+  if (operations.length === 0) {
+    alert("Aucune opération en attente à exporter.");
+    return;
+  }
+
+  const colonnes = [
+    "Identifiant",
+    "Compte",
+    "Date",
+    "Type",
+    "Tiers",
+    "Catégorie",
+    "Montant",
+    "Mode de paiement",
+    "Payé par",
+    "Statut"
+  ];
+
+  const echapperCSV = valeur => {
+    const texte = String(valeur ?? "");
+    return '"' + texte.replace(/"/g, '""') + '"';
+  };
+
+  const lignes = [
+    colonnes.map(echapperCSV).join(";"),
+    ...operations.map(op => [
+      op.id,
+      op.compte,
+      op.date,
+      op.type,
+      op.tiers,
+      op.categorie,
+      op.montant.toString().replace(".", ","),
+      op.paiement,
+      op.payePar,
+      op.statut
+    ].map(echapperCSV).join(";"))
+  ];
+
+  const contenu = "\uFEFF" + lignes.join("\r\n");
+
+  const fichier = new Blob([contenu], {
+    type: "text/csv;charset=utf-8;"
+  });
+
+  const lien = document.createElement("a");
+  lien.href = URL.createObjectURL(fichier);
+  lien.download = "P360_Export_Excel_" +
+    new Date().toISOString().slice(0, 10) + ".csv";
+
+  document.body.appendChild(lien);
+  lien.click();
+  lien.remove();
+
+  setTimeout(() => URL.revokeObjectURL(lien.href), 1000);
+
+  alert(
+    operations.length +
+    " opération(s) en attente exportée(s) vers Excel."
+  );
+}
+
 function lireOperations() {
   try {
     return JSON.parse(localStorage.getItem(CLE)) || [];
