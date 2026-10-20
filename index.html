@@ -126,32 +126,126 @@ input, select {
     ＋ Nouvelle opération
   </button>
 
-  <div class="menu">
-    <button onclick="afficher('attente')">
-      📋 Opérations en attente
-    </button>
-    <button onclick="messageTest()">
-      🏦 Mes comptes
-    </button>
-    <button onclick="afficher('espagne')">
-    💳 CB Espagne
-    </button>
-    <button onclick="messageTest()">
-      🔄 Synchronisation
-    </button>
-    <button onclick="exporterSauvegarde()">
-  💾 Exporter une sauvegarde
+  
+<div class="menu">
+  <button onclick="afficher('menuComptes')">
+    🏦 Mes comptes
   </button>
-  <button onclick="importerSauvegarde()">
-  📂 Importer une sauvegarde
-</button>
-<button onclick="exporterVersExcel()">
-  📤 Exporter vers Patrimoine 360
-</button>
-<button onclick="importerConfirmationExcel()">
-  ✅ Confirmer les imports Excel
-</button>
+
+  <button onclick="afficher('espagne')">
+    💳 CB Espagne
+  </button>
+
+  <button onclick="afficher('menuTransferts')">
+    🔄 Import / Export
+  </button>
+
+  <button onclick="afficher('menuSauvegardes')">
+    💾 Sauvegardes
+  </button>
 </div>
+
+</section>
+
+<section id="menuTransferts" class="page">
+  <small>P360 MOBILE</small>
+  <h2>🔄 Import / Export</h2>
+
+  <button class="principal"
+    onclick="afficher('attente')">
+    📋 Opérations en attente
+  </button>
+
+  <button class="principal"
+    onclick="exporterVersExcel()">
+    📤 Exporter vers Excel
+  </button>
+
+  <button class="principal"
+    onclick="importerConfirmationExcel()">
+    ✅ Confirmer les imports Excel
+  </button>
+
+  <div class="actions">
+    <button class="retour"
+      onclick="afficher('accueil')">
+      Retour à l'accueil
+    </button>
+  </div>
+</section>
+
+<section id="menuSauvegardes" class="page">
+  <small>P360 MOBILE</small>
+  <h2>💾 Sauvegardes</h2>
+
+  <button class="principal"
+    onclick="exporterSauvegarde()">
+    💾 Exporter une sauvegarde
+  </button>
+
+  <button class="principal"
+    onclick="importerSauvegarde()">
+    📂 Importer une sauvegarde
+  </button>
+
+  <div class="actions">
+    <button class="retour"
+      onclick="afficher('accueil')">
+      Retour à l'accueil
+    </button>
+  </div>
+</section>
+
+<section id="menuComptes" class="page">
+  <small>P360 MOBILE</small>
+  <h2>🏦 Mes comptes</h2>
+
+  <p>Sélectionne un compte pour consulter ses opérations.</p>
+
+  <div class="menu">
+    <button onclick="ouvrirCompte('Courant')">
+      Courant
+    </button>
+    <button onclick="ouvrirCompte('Joint')">
+      Joint
+    </button>
+    <button onclick="ouvrirCompte('Espagne')">
+      Espagne
+    </button>
+    <button onclick="ouvrirCompte('Blois')">
+      Blois
+    </button>
+    <button onclick="ouvrirCompte('Orléans')">
+      Orléans
+    </button>
+    <button onclick="ouvrirCompte('Oney')">
+      Oney
+    </button>
+  </div>
+
+  <div class="actions">
+    <button class="retour"
+      onclick="afficher('accueil')">
+      Retour à l'accueil
+    </button>
+  </div>
+</section>
+
+<section id="detailCompte" class="page">
+  <small>P360 MOBILE · MES COMPTES</small>
+  <h2 id="titreCompte">Compte</h2>
+
+  <p id="resumeCompte"></p>
+
+  <h3>Dernières opérations</h3>
+  <div id="listeCompte"></div>
+
+  <div class="actions">
+    <button class="retour"
+      onclick="afficher('menuComptes')">
+      Retour aux comptes
+    </button>
+  </div>
 </section>
 
 <section id="saisie" class="page">
@@ -608,6 +702,55 @@ function importerConfirmationExcel() {
   });
 
   selecteur.click();
+}
+
+function ouvrirCompte(nomCompte) {
+  const operations = lireOperations()
+    .filter(op => op.compte === nomCompte)
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  $("titreCompte").textContent = nomCompte;
+
+  $("resumeCompte").textContent =
+    operations.length +
+    " opération(s) enregistrée(s) sur cet appareil.";
+
+  const liste = $("listeCompte");
+  liste.replaceChildren();
+
+  if (operations.length === 0) {
+    const message = document.createElement("p");
+    message.textContent = "Aucune opération enregistrée.";
+    liste.appendChild(message);
+  }
+
+  operations.slice(0, 20).forEach(op => {
+    const bloc = document.createElement("div");
+    bloc.className = "operation";
+
+    const titre = document.createElement("strong");
+    titre.textContent = op.tiers;
+
+    const details = document.createElement("span");
+    details.textContent =
+      op.date + " · " + op.categorie +
+      " · " + (op.statut === "importe"
+        ? "Importée dans Excel"
+        : "En attente");
+
+    const montant = document.createElement("div");
+    montant.className =
+      "montant " + (op.type === "debit" ? "debit" : "credit");
+
+    montant.textContent =
+      (op.type === "debit" ? "−" : "+") +
+      op.montant.toFixed(2).replace(".", ",") + " €";
+
+    bloc.append(titre, details, montant);
+    liste.appendChild(bloc);
+  });
+
+  afficher("detailCompte");
 }
 
 function lireOperations() {
