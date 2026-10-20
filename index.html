@@ -203,23 +203,12 @@ input, select {
   <p>Sélectionne un compte pour consulter ses opérations.</p>
 
   <div class="menu">
-    <button onclick="ouvrirCompte('Courant')">
-      Courant
-    </button>
-    <button onclick="ouvrirCompte('Joint')">
-      Joint
-    </button>
-    <button onclick="ouvrirCompte('Espagne')">
-      Espagne
-    </button>
-    <button onclick="ouvrirCompte('Blois')">
-      Blois
-    </button>
-    <button onclick="ouvrirCompte('Orléans')">
-      Orléans
-    </button>
-    <button onclick="ouvrirCompte('Oney')">
-      Oney
+<button onclick="ouvrirCompte('Courant')">Compte Courant</button>
+<button onclick="ouvrirCompte('Joint')">Compte Joint</button>
+<button onclick="ouvrirCompte('Espagne')">Compte Espagne</button>
+<button onclick="ouvrirCompte('Blois')">Compte Blois</button>
+<button onclick="ouvrirCompte('Orléans')">Compte Orléans</button>
+<button onclick="ouvrirCompte('Oney')">Compte Oney</button>
     </button>
   </div>
 
@@ -711,7 +700,7 @@ function ouvrirCompte(nomCompte) {
     .filter(op => op.compte === nomCompte)
     .sort((a, b) => b.date.localeCompare(a.date));
 
-  $("titreCompte").textContent = nomCompte;
+  $("titreCompte").textContent = "Compte " + nomCompte;
 
   $("resumeCompte").textContent =
     operations.length +
