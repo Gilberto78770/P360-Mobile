@@ -342,15 +342,17 @@ input, select {
 
   <p>Plafond mensuel de la carte bancaire</p>
 
-  <h1>1 000 €</h1>
-
+  <h1 id="plafondEspagne">1 000 €</h1>
+<button type="button" onclick="modifierPlafondEspagne()">
+  ✏️ Modifier le plafond
+</button>
   <div id="suiviEspagne">
     <p>Dépenses du mois : calcul à venir</p>
     <p>Disponible : calcul à venir</p>
   </div>
 
   <p>
-    🔔 Alertes prévues à 800 € et 900 €.
+    🔔 Alertes automatiques à 80 % et 90 % du plafond.
   </p>
 
   <div class="actions">
@@ -935,7 +937,32 @@ function afficherRecapEspagne(operation) {
 
   afficher("recapEspagne");
 }
+function modifierPlafondEspagne() {
+  const plafondActuel =
+    Number(localStorage.getItem("p360_plafond_espagne")) || 1000;
 
+  const saisie = prompt(
+    "Nouveau plafond mensuel de la CB Espagne (en euros) :",
+    plafondActuel
+  );
+
+  if (saisie === null) return;
+
+  const nouveauPlafond = Number(
+    saisie.trim().replace(/\s/g, "").replace(",", ".")
+  );
+
+  if (!Number.isFinite(nouveauPlafond) || nouveauPlafond <= 0) {
+    alert("Merci de saisir un montant valide supérieur à zéro.");
+    return;
+  }
+
+  localStorage.setItem("p360_plafond_espagne", nouveauPlafond);
+  calculerCBEspagne();
+
+  alert("Nouveau plafond enregistré : " +
+    nouveauPlafond.toLocaleString("fr-FR") + " €");
+}
 function calculerCBEspagne() {
   const operations = lireOperations();
 
@@ -955,8 +982,11 @@ function calculerCBEspagne() {
       );
     }, 0);
 
-  const disponible = 1000 - depenses;
-
+  const plafond = Number(localStorage.getItem("p360_plafond_espagne")) || 1000;
+  const disponible = plafond - depenses;
+  
+$("plafondEspagne").textContent = plafond.toLocaleString("fr-FR") + " €";
+  
   const euros = valeur =>
     valeur.toLocaleString("fr-FR", {
       style: "currency",
@@ -965,12 +995,12 @@ function calculerCBEspagne() {
 
   let alerte = "🟢 Plafond sous surveillance.";
 
-  if (depenses > 1000) {
+  if (depenses > plafond) {
     alerte = "🔴 Attention : plafond dépassé !";
-  } else if (depenses >= 900) {
-    alerte = "🟠 Alerte : seuil de 900 € atteint !";
-  } else if (depenses >= 800) {
-    alerte = "🟡 Alerte : seuil de 800 € atteint !";
+  } else if (depenses >= plafond * 0.90) {
+    alerte = "🟠 Alerte : 90 % du plafond atteint !";
+  } else if (depenses >= plafond * 0.80) {
+    alerte = "🟡 Alerte : 80 % du plafond atteint !";
   }
 
   const zone = $("suiviEspagne");
