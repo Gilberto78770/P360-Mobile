@@ -148,6 +148,9 @@ input, select {
 <button onclick="exporterVersExcel()">
   📤 Exporter vers Patrimoine 360
 </button>
+<button onclick="importerConfirmationExcel()">
+  ✅ Confirmer les imports Excel
+</button>
 </div>
 </section>
 
@@ -492,6 +495,119 @@ function exporterVersExcel() {
     operations.length +
     " opération(s) en attente exportée(s) vers Excel."
   );
+}
+
+function importerConfirmationExcel() {
+  const selecteur = document.createElement("input");
+  selecteur.type = "file";
+  selecteur.accept = ".csv,text/csv";
+
+  selecteur.addEventListener("change", async function () {
+    const fichier = selecteur.files[0];
+    if (!fichier) return;
+
+    try {
+      const contenu = (await fichier.text())
+        .replace(/^\uFEFF/, "")
+        .trim();
+
+      const lignes = contenu.split(/\r?\n/);
+
+      if (lignes[0].trim() !== "Identifiant;Statut") {
+        alert("Confirmation refusée : en-tête incorrect.");
+        return;
+      }
+
+      const identifiants = new Set();
+
+      for (const ligne of lignes.slice(1)) {
+        if (!ligne.trim()) continue;
+
+        const correspondance = ligne.trim().match(
+          /^"((?:[^"]|"")+)";"importe"$/
+        );
+
+        if (!correspondance) {
+          alert("Confirmation refusée : ligne CSV invalide.");
+          return;
+        }
+
+        const id = correspondance[1].replace(/""/g, '"');
+
+        if (identifiants.has(id)) {
+          alert("Confirmation refusée : identifiant en double.");
+          return;
+        }
+
+        identifiants.add(id);
+      }
+
+      if (identifiants.size === 0) {
+        alert("Aucun identifiant à confirmer.");
+        return;
+      }
+
+      const operations = lireOperations();
+
+      const aConfirmer = operations.filter(op =>
+        identifiants.has(op.id) &&
+        op.statut === "en_attente"
+      );
+
+      if (aConfirmer.length === 0) {
+        alert(
+          "Aucune nouvelle opération à confirmer.\n" +
+          "Les opérations sont peut-être déjà confirmées."
+        );
+        return;
+      }
+
+      const accord = confirm(
+        "Confirmation Excel reconnue.\n\n" +
+        identifiants.size + " identifiant(s) dans le fichier.\n" +
+        aConfirmer.length + " opération(s) à confirmer.\n\n" +
+        "Confirmer leur importation dans Excel ?"
+      );
+
+      if (!accord) return;
+
+      const operationsActualisees = operations.map(op => {
+        if (
+          identifiants.has(op.id) &&
+          op.statut === "en_attente"
+        ) {
+          return {
+            ...op,
+            statut: "importe",
+            dateConfirmationImport: new Date().toISOString()
+          };
+        }
+
+        return op;
+      });
+
+      localStorage.setItem(
+        CLE,
+        JSON.stringify(operationsActualisees)
+      );
+
+      alert(
+        aConfirmer.length +
+        " opération(s) confirmée(s) avec succès.\n" +
+        "Aucune opération supprimée."
+      );
+
+      afficher("attente");
+
+    } catch (erreur) {
+      alert(
+        "Impossible de traiter la confirmation Excel.\n" +
+        "Aucune opération modifiée si la lecture a échoué."
+      );
+    }
+  });
+
+  selecteur.click();
 }
 
 function lireOperations() {
