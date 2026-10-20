@@ -584,7 +584,13 @@ function supprimerOperation(id) {
   const operation = operations.find(op => op.id === id);
 
   if (!operation) return;
-
+if (operation.statut === "importe") {
+  alert(
+    "Cette opération a déjà été importée dans Excel.\n" +
+    "Elle ne peut plus être supprimée depuis P360 Mobile."
+  );
+  return;
+}
   const confirmation = confirm(
     "Veux-tu vraiment supprimer cette opération de test ?"
   );
@@ -608,6 +614,13 @@ function modifierOperation(id) {
   const operation = operations.find(op => op.id === id);
 
   if (!operation) return;
+  if (operation.statut === "importe") {
+  alert(
+    "Cette opération a déjà été importée dans Excel.\n" +
+    "Elle ne peut plus être modifiée depuis P360 Mobile."
+  );
+  return;
+}
   operationEnModification = id;
 
   $("compte").value = operation.compte;
