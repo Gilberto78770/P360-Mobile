@@ -782,7 +782,9 @@ function dateLocale() {
 }
 
 function afficherOperations() {
-  const operations = lireOperations();
+  const operations = lireOperations().filter(
+  op => op.statut === "en_attente"
+);
   $("compteur").textContent =
     `${operations.length} opération(s) enregistrée(s)`;
 
