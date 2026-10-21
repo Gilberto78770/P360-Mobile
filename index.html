@@ -126,28 +126,114 @@ input, select {
     ＋ Nouvelle opération
   </button>
 
-  <div class="menu">
-    <button onclick="afficher('attente')">
-      📋 Opérations en attente
-    </button>
-    <button onclick="messageTest()">
-      🏦 Mes comptes
-    </button>
-    <button onclick="afficher('espagne')">
-    💳 CB Espagne
-    </button>
-    <button onclick="messageTest()">
-      🔄 Synchronisation
-    </button>
-    <button onclick="exporterSauvegarde()">
-  💾 Exporter une sauvegarde
+  
+<div class="menu">
+  <button onclick="afficher('menuComptes')">
+    🏦 Mes comptes
   </button>
-  <button onclick="importerSauvegarde()">
-  📂 Importer une sauvegarde
-<button onclick="exporterVersExcel()">
-  📤 Exporter vers Patrimoine 360
-</button>
-</button>
+
+  <button onclick="afficher('espagne')">
+    💳 CB Espagne
+  </button>
+
+  <button onclick="afficher('menuTransferts')">
+    🔄 Import / Export
+  </button>
+
+  <button onclick="afficher('menuSauvegardes')">
+    💾 Sauvegardes
+  </button>
+</div>
+
+</section>
+
+<section id="menuTransferts" class="page">
+  <small>P360 MOBILE</small>
+  <h2>🔄 Import / Export</h2>
+
+  <button class="principal"
+    onclick="afficher('attente')">
+    📋 Opérations en attente
+  </button>
+
+  <button class="principal"
+    onclick="exporterVersExcel()">
+    📤 Exporter vers Excel
+  </button>
+
+  <button class="principal"
+    onclick="importerConfirmationExcel()">
+    ✅ Confirmer les imports Excel
+  </button>
+
+  <div class="actions">
+    <button class="retour"
+      onclick="afficher('accueil')">
+      Retour à l'accueil
+    </button>
+  </div>
+</section>
+
+<section id="menuSauvegardes" class="page">
+  <small>P360 MOBILE</small>
+  <h2>💾 Sauvegardes</h2>
+
+  <button class="principal"
+    onclick="exporterSauvegarde()">
+    💾 Exporter une sauvegarde
+  </button>
+
+  <button class="principal"
+    onclick="importerSauvegarde()">
+    📂 Importer une sauvegarde
+  </button>
+
+  <div class="actions">
+    <button class="retour"
+      onclick="afficher('accueil')">
+      Retour à l'accueil
+    </button>
+  </div>
+</section>
+
+<section id="menuComptes" class="page">
+  <small>P360 MOBILE</small>
+  <h2>🏦 Mes comptes</h2>
+
+  <p>Sélectionne un compte pour consulter ses opérations.</p>
+
+  <div class="menu">
+<button onclick="ouvrirCompte('Courant')">Compte Courant</button>
+<button onclick="ouvrirCompte('Joint')">Compte Joint</button>
+<button onclick="ouvrirCompte('Espagne')">Compte Espagne</button>
+<button onclick="ouvrirCompte('Blois')">Compte Blois</button>
+<button onclick="ouvrirCompte('Orléans')">Compte Orléans</button>
+<button onclick="ouvrirCompte('Oney')">Compte Oney</button>
+    </button>
+  </div>
+
+  <div class="actions">
+    <button class="retour"
+      onclick="afficher('accueil')">
+      Retour à l'accueil
+    </button>
+  </div>
+</section>
+
+<section id="detailCompte" class="page">
+  <small>P360 MOBILE · MES COMPTES</small>
+  <h2 id="titreCompte">Compte</h2>
+
+  <p id="resumeCompte"></p>
+
+  <h3>Dernières opérations</h3>
+  <div id="listeCompte"></div>
+
+  <div class="actions">
+    <button class="retour"
+      onclick="afficher('menuComptes')">
+      Retour aux comptes
+    </button>
   </div>
 </section>
 
@@ -245,15 +331,17 @@ input, select {
 
   <p>Plafond mensuel de la carte bancaire</p>
 
-  <h1>1 000 €</h1>
-
+  <h1 id="plafondEspagne">1 000 €</h1>
+<button type="button" onclick="modifierPlafondEspagne()">
+  ✏️ Modifier le plafond
+</button>
   <div id="suiviEspagne">
     <p>Dépenses du mois : calcul à venir</p>
     <p>Disponible : calcul à venir</p>
   </div>
 
   <p>
-    🔔 Alertes prévues à 800 € et 900 €.
+    🔔 Alertes automatiques à 80 % et 90 % du plafond.
   </p>
 
   <div class="actions">
@@ -494,6 +582,168 @@ function exporterVersExcel() {
   );
 }
 
+function importerConfirmationExcel() {
+  const selecteur = document.createElement("input");
+  selecteur.type = "file";
+  selecteur.accept = ".csv,text/csv";
+
+  selecteur.addEventListener("change", async function () {
+    const fichier = selecteur.files[0];
+    if (!fichier) return;
+
+    try {
+      const contenu = (await fichier.text())
+        .replace(/^\uFEFF/, "")
+        .trim();
+
+      const lignes = contenu.split(/\r?\n/);
+
+      if (lignes[0].trim() !== "Identifiant;Statut") {
+        alert("Confirmation refusée : en-tête incorrect.");
+        return;
+      }
+
+      const identifiants = new Set();
+
+      for (const ligne of lignes.slice(1)) {
+        if (!ligne.trim()) continue;
+
+        const correspondance = ligne.trim().match(
+          /^"((?:[^"]|"")+)";"importe"$/
+        );
+
+        if (!correspondance) {
+          alert("Confirmation refusée : ligne CSV invalide.");
+          return;
+        }
+
+        const id = correspondance[1].replace(/""/g, '"');
+
+        if (identifiants.has(id)) {
+          alert("Confirmation refusée : identifiant en double.");
+          return;
+        }
+
+        identifiants.add(id);
+      }
+
+      if (identifiants.size === 0) {
+        alert("Aucun identifiant à confirmer.");
+        return;
+      }
+
+      const operations = lireOperations();
+
+      const aConfirmer = operations.filter(op =>
+        identifiants.has(op.id) &&
+        op.statut === "en_attente"
+      );
+
+      if (aConfirmer.length === 0) {
+        alert(
+          "Aucune nouvelle opération à confirmer.\n" +
+          "Les opérations sont peut-être déjà confirmées."
+        );
+        return;
+      }
+
+      const accord = confirm(
+        "Confirmation Excel reconnue.\n\n" +
+        identifiants.size + " identifiant(s) dans le fichier.\n" +
+        aConfirmer.length + " opération(s) à confirmer.\n\n" +
+        "Confirmer leur importation dans Excel ?"
+      );
+
+      if (!accord) return;
+
+      const operationsActualisees = operations.map(op => {
+        if (
+          identifiants.has(op.id) &&
+          op.statut === "en_attente"
+        ) {
+          return {
+            ...op,
+            statut: "importe",
+            dateConfirmationImport: new Date().toISOString()
+          };
+        }
+
+        return op;
+      });
+
+      localStorage.setItem(
+        CLE,
+        JSON.stringify(operationsActualisees)
+      );
+
+      alert(
+        aConfirmer.length +
+        " opération(s) confirmée(s) avec succès.\n" +
+        "Aucune opération supprimée."
+      );
+
+      afficher("attente");
+
+    } catch (erreur) {
+      alert(
+        "Impossible de traiter la confirmation Excel.\n" +
+        "Aucune opération modifiée si la lecture a échoué."
+      );
+    }
+  });
+
+  selecteur.click();
+}
+
+function ouvrirCompte(nomCompte) {
+  const operations = lireOperations()
+    .filter(op => op.compte === nomCompte)
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  $("titreCompte").textContent = "Compte " + nomCompte;
+
+  $("resumeCompte").textContent =
+    operations.length +
+    " opération(s) enregistrée(s) sur cet appareil.";
+
+  const liste = $("listeCompte");
+  liste.replaceChildren();
+
+  if (operations.length === 0) {
+    const message = document.createElement("p");
+    message.textContent = "Aucune opération enregistrée.";
+    liste.appendChild(message);
+  }
+
+  operations.slice(0, 20).forEach(op => {
+    const bloc = document.createElement("div");
+    bloc.className = "operation";
+
+    const titre = document.createElement("strong");
+    titre.textContent = op.tiers;
+
+    const details = document.createElement("span");
+    details.textContent =
+      op.date + " · " + op.categorie +
+      " · " + (op.statut === "importe"
+        ? "Importée dans Excel"
+        : "En attente");
+
+    const montant = document.createElement("div");
+    montant.className =
+      "montant " + (op.type === "debit" ? "debit" : "credit");
+
+    montant.textContent =
+      (op.type === "debit" ? "−" : "+") +
+      op.montant.toFixed(2).replace(".", ",") + " €";
+
+    bloc.append(titre, details, montant);
+    liste.appendChild(bloc);
+  });
+
+  afficher("detailCompte");
+}
+
 function lireOperations() {
   try {
     return JSON.parse(localStorage.getItem(CLE)) || [];
@@ -532,7 +782,9 @@ function dateLocale() {
 }
 
 function afficherOperations() {
-  const operations = lireOperations();
+  const operations = lireOperations().filter(
+  op => op.statut === "en_attente"
+);
   $("compteur").textContent =
     `${operations.length} opération(s) enregistrée(s)`;
 
@@ -584,7 +836,13 @@ function supprimerOperation(id) {
   const operation = operations.find(op => op.id === id);
 
   if (!operation) return;
-
+if (operation.statut === "importe") {
+  alert(
+    "Cette opération a déjà été importée dans Excel.\n" +
+    "Elle ne peut plus être supprimée depuis P360 Mobile."
+  );
+  return;
+}
   const confirmation = confirm(
     "Veux-tu vraiment supprimer cette opération de test ?"
   );
@@ -608,6 +866,13 @@ function modifierOperation(id) {
   const operation = operations.find(op => op.id === id);
 
   if (!operation) return;
+  if (operation.statut === "importe") {
+  alert(
+    "Cette opération a déjà été importée dans Excel.\n" +
+    "Elle ne peut plus être modifiée depuis P360 Mobile."
+  );
+  return;
+}
   operationEnModification = id;
 
   $("compte").value = operation.compte;
@@ -676,7 +941,32 @@ function afficherRecapEspagne(operation) {
 
   afficher("recapEspagne");
 }
+function modifierPlafondEspagne() {
+  const plafondActuel =
+    Number(localStorage.getItem("p360_plafond_espagne")) || 1000;
 
+  const saisie = prompt(
+    "Nouveau plafond mensuel de la CB Espagne (en euros) :",
+    plafondActuel
+  );
+
+  if (saisie === null) return;
+
+  const nouveauPlafond = Number(
+    saisie.trim().replace(/\s/g, "").replace(",", ".")
+  );
+
+  if (!Number.isFinite(nouveauPlafond) || nouveauPlafond <= 0) {
+    alert("Merci de saisir un montant valide supérieur à zéro.");
+    return;
+  }
+
+  localStorage.setItem("p360_plafond_espagne", nouveauPlafond);
+  calculerCBEspagne();
+
+  alert("Nouveau plafond enregistré : " +
+    nouveauPlafond.toLocaleString("fr-FR") + " €");
+}
 function calculerCBEspagne() {
   const operations = lireOperations();
 
@@ -696,8 +986,11 @@ function calculerCBEspagne() {
       );
     }, 0);
 
-  const disponible = 1000 - depenses;
-
+  const plafond = Number(localStorage.getItem("p360_plafond_espagne")) || 1000;
+  const disponible = plafond - depenses;
+  
+$("plafondEspagne").textContent = plafond.toLocaleString("fr-FR") + " €";
+  
   const euros = valeur =>
     valeur.toLocaleString("fr-FR", {
       style: "currency",
@@ -706,12 +999,12 @@ function calculerCBEspagne() {
 
   let alerte = "🟢 Plafond sous surveillance.";
 
-  if (depenses > 1000) {
+  if (depenses > plafond) {
     alerte = "🔴 Attention : plafond dépassé !";
-  } else if (depenses >= 900) {
-    alerte = "🟠 Alerte : seuil de 900 € atteint !";
-  } else if (depenses >= 800) {
-    alerte = "🟡 Alerte : seuil de 800 € atteint !";
+  } else if (depenses >= plafond * 0.90) {
+    alerte = "🟠 Alerte : 90 % du plafond atteint !";
+  } else if (depenses >= plafond * 0.80) {
+    alerte = "🟡 Alerte : 80 % du plafond atteint !";
   }
 
   const zone = $("suiviEspagne");

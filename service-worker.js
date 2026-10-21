@@ -1,5 +1,5 @@
 
-const CACHE_NAME = "p360-mobile-v1";
+const CACHE_NAME = "p360-mobile-v9";
 
 const FICHIERS = [
   "./",
@@ -20,7 +20,15 @@ self.addEventListener("install", evenement => {
 });
 
 self.addEventListener("activate", evenement => {
-  evenement.waitUntil(self.clients.claim());
+  evenement.waitUntil(
+    caches.keys()
+      .then(noms => Promise.all(
+        noms
+          .filter(nom => nom.startsWith("p360-mobile-") && nom !== CACHE_NAME)
+          .map(nom => caches.delete(nom))
+      ))
+      .then(() => self.clients.claim())
+  );
 });
 
 self.addEventListener("fetch", evenement => {
