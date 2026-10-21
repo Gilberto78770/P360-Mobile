@@ -750,7 +750,10 @@ function ouvrirCompte(nomCompte) {
       " · " + (op.statut === "importe"
         ? "Importée dans Excel"
         : "En attente");
-
+if (op.description) {
+  details.textContent +=
+    " · " + op.description;
+}
     const montant = document.createElement("div");
     montant.className =
       "montant " + (op.type === "debit" ? "debit" : "credit");
@@ -829,7 +832,10 @@ function afficherOperations() {
     montant.textContent =
       (op.type === "debit" ? "−" : "+") +
       op.montant.toFixed(2).replace(".", ",") + " €";
-
+if (op.description) {
+  details.textContent +=
+    " · " + op.description;
+}
     
 const boutons = document.createElement("div");
 boutons.className = "actions";
@@ -905,7 +911,7 @@ function modifierOperation(id) {
   $("categorie").value = operation.categorie;
   $("paiement").value = operation.paiement;
   $("payePar").value = operation.payePar;
-
+  $("description").value = operation.description || "";
   alert(
     "Les informations sont chargées dans le formulaire. " +
     "Nous allons maintenant préparer leur enregistrement."
