@@ -309,7 +309,9 @@ input, select {
   <option value="Gilberto">Gilberto</option>
   <option value="Autres">Autres</option>
 </select>
-
+<label for="description">Description / Observations</label>
+<textarea id="description" rows="3"
+          placeholder="Ajouter une observation (facultatif)"></textarea>
     <div class="actions">
       <button type="button" class="retour"
         onclick="afficher('accueil')">
@@ -553,6 +555,7 @@ function exporterVersExcel() {
     "Montant",
     "Mode de paiement",
     "Payé par",
+    "Description",
     "Statut"
   ];
 
@@ -573,6 +576,7 @@ function exporterVersExcel() {
       op.montant.toString().replace(".", ","),
       op.paiement,
       op.payePar,
+      op.description || "",
       op.statut
     ].map(echapperCSV).join(";"))
   ];
@@ -1070,6 +1074,7 @@ id: "test-" + Date.now() + "-" + Math.random().toString(36).slice(2),
     categorie: $("categorie").value.trim(),
     paiement: $("paiement").value,
     payePar: $("payePar").value.trim(),
+    description: $("description").value.trim(),
     statut: "en_attente"
   };
 
