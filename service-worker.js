@@ -1,5 +1,5 @@
 
-const CACHE_NAME = "p360-mobile-v9";
+const CACHE_NAME = "p360-mobile-v9-1";
 
 const FICHIERS = [
   "./",

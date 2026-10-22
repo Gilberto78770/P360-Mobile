@@ -49,6 +49,8 @@ button {
   background: #f5f7fa;
   border: 1px solid #dce3ed;
   border-radius: 12px;
+  font-size: 18px;
+  font-weight: bold;
 }
 .page { display: none; }
 .page.active { display: block; }
@@ -58,7 +60,7 @@ label {
   font-weight: bold;
   font-size: 14px;
 }
-input, select {
+input, select, textarea {
   width: 100%;
   padding: 12px;
   border: 1px solid #cbd5e1;
@@ -87,7 +89,10 @@ input, select {
   background: #254c83;
   color: white;
 }
-.retour { background: #e8edf4; }
+.retour {
+  background: #e8edf4;
+  font-size: 16px;
+}
 .operation {
   padding: 14px 0;
   border-bottom: 1px solid #e2e8f0;
@@ -105,6 +110,15 @@ input, select {
 }
 .debit { color: #bd3747; }
 .credit { color: #19805a; }
+ #menuTransferts > button.principal {
+  display: block;
+  width: 100%;
+  min-height: 60px;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+  font-size: 16px;
+  text-align: center;
+} 
 </style>
 
 <link rel="manifest" href="./manifest.json">
@@ -137,7 +151,7 @@ input, select {
   </button>
 
   <button onclick="afficher('menuTransferts')">
-    🔄 Import / Export
+    ✏️ Gérer les opérations
   </button>
 
   <button onclick="afficher('menuSauvegardes')">
@@ -149,7 +163,7 @@ input, select {
 
 <section id="menuTransferts" class="page">
   <small>P360 MOBILE</small>
-  <h2>🔄 Import / Export</h2>
+  <h2>✏️ Gérer les opérations</h2>
 
   <button class="principal"
     onclick="afficher('attente')">
@@ -209,7 +223,6 @@ input, select {
 <button onclick="ouvrirCompte('Blois')">Compte Blois</button>
 <button onclick="ouvrirCompte('Orléans')">Compte Orléans</button>
 <button onclick="ouvrirCompte('Oney')">Compte Oney</button>
-    </button>
   </div>
 
   <div class="actions">
@@ -289,12 +302,18 @@ input, select {
     </select>
 
     <label for="payePar">Payé par</label>
-    <input id="payePar" type="text"
-      placeholder="À renseigner">
-
+   <select id="payePar">
+  <option value="">Choisir une personne</option>
+  <option value="Fabi">Fabi</option>
+  <option value="Gilberto">Gilberto</option>
+  <option value="Autres">Autres</option>
+</select>
+<label for="description">Description / Observations</label>
+<textarea id="description" rows="3"
+          placeholder="Ajouter une observation (facultatif)"></textarea>
     <div class="actions">
       <button type="button" class="retour"
-        onclick="afficher('accueil')">
+        onclick="annulerSaisie()">
         Annuler
       </button>
       <button type="submit" class="enregistrer">
@@ -535,6 +554,7 @@ function exporterVersExcel() {
     "Montant",
     "Mode de paiement",
     "Payé par",
+    "Description",
     "Statut"
   ];
 
@@ -555,6 +575,7 @@ function exporterVersExcel() {
       op.montant.toString().replace(".", ","),
       op.paiement,
       op.payePar,
+      op.description || "",
       op.statut
     ].map(echapperCSV).join(";"))
   ];
@@ -728,7 +749,10 @@ function ouvrirCompte(nomCompte) {
       " · " + (op.statut === "importe"
         ? "Importée dans Excel"
         : "En attente");
-
+if (op.description) {
+  details.textContent +=
+    " · " + op.description;
+}
     const montant = document.createElement("div");
     montant.className =
       "montant " + (op.type === "debit" ? "debit" : "credit");
@@ -750,6 +774,14 @@ function lireOperations() {
   } catch {
     return [];
   }
+}
+
+function annulerSaisie() {
+  operationEnModification = null;
+  $("formulaire").reset();
+  $("date").value = dateLocale();
+  $("type").value = "debit";
+  afficher("accueil");
 }
 
 function afficher(page) {
@@ -807,7 +839,10 @@ function afficherOperations() {
     montant.textContent =
       (op.type === "debit" ? "−" : "+") +
       op.montant.toFixed(2).replace(".", ",") + " €";
-
+if (op.description) {
+  details.textContent +=
+    " · " + op.description;
+}
     
 const boutons = document.createElement("div");
 boutons.className = "actions";
@@ -883,7 +918,7 @@ function modifierOperation(id) {
   $("categorie").value = operation.categorie;
   $("paiement").value = operation.paiement;
   $("payePar").value = operation.payePar;
-
+  $("description").value = operation.description || "";
   alert(
     "Les informations sont chargées dans le formulaire. " +
     "Nous allons maintenant préparer leur enregistrement."
@@ -907,7 +942,8 @@ function afficherRecapEspagne(operation) {
       0
     );
 
-  const disponible = 1000 - total;
+  const plafond = Number(localStorage.getItem("p360_plafond_espagne")) || 1000;
+  const disponible = plafond - total;
 
   const euros = valeur =>
     valeur.toLocaleString("fr-FR", {
@@ -917,12 +953,12 @@ function afficherRecapEspagne(operation) {
 
   let alerte = "🟢 Plafond sous surveillance.";
 
-  if (total > 1000) {
+  if (total > plafond) {
     alerte = "🔴 Attention : plafond dépassé !";
-  } else if (total >= 900) {
-    alerte = "🟠 Seuil de 900 € atteint !";
-  } else if (total >= 800) {
-    alerte = "🟡 Seuil de 800 € atteint !";
+  } else if (total >= plafond * 0.90) {
+    alerte = "🟠 Seuil de 90 % du plafond atteint !";
+  } else if (total >= plafond * 0.80) {
+    alerte = "🟡 Seuil de 80 % du plafond atteint !";
   }
 
   const zone = $("detailsRecapEspagne");
@@ -1052,6 +1088,7 @@ id: "test-" + Date.now() + "-" + Math.random().toString(36).slice(2),
     categorie: $("categorie").value.trim(),
     paiement: $("paiement").value,
     payePar: $("payePar").value.trim(),
+    description: $("description").value.trim(),
     statut: "en_attente"
   };
 
@@ -1078,21 +1115,19 @@ if (
 
   const nouveauTotal = totalActuel + operation.montant;
 
-  if (nouveauTotal > 1000) {
+  const plafondEspagne = Number(localStorage.getItem("p360_plafond_espagne")) || 1000;
+  if (nouveauTotal > plafondEspagne) {
     const continuer = confirm(
       "⚠️ ATTENTION : PLAFOND CB ESPAGNE !\n\n" +
       "Dépenses après cette opération : " +
       nouveauTotal.toFixed(2) + " €\n" +
-      "Plafond mensuel : 1 000 €\n\n" +
+      "Plafond mensuel : " + plafondEspagne.toLocaleString("fr-FR") + " €\n\n" +
       "Veux-tu quand même enregistrer cette opération ?"
     );
 
     if (!continuer) {
       
-  $("formulaire").reset();
-  $("date").value = dateLocale();
-  operationEnModification = null;
-  afficher("accueil");
+  // Conserver la saisie si le dépassement du plafond est refusé.
   return;
 }
   }
