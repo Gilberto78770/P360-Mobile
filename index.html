@@ -60,7 +60,7 @@ label {
   font-weight: bold;
   font-size: 14px;
 }
-input, select {
+input, select, textarea {
   width: 100%;
   padding: 12px;
   border: 1px solid #cbd5e1;
@@ -151,7 +151,7 @@ input, select {
   </button>
 
   <button onclick="afficher('menuTransferts')">
-    🔄 Import / Export
+    ✏️ Gérer les opérations
   </button>
 
   <button onclick="afficher('menuSauvegardes')">
@@ -163,7 +163,7 @@ input, select {
 
 <section id="menuTransferts" class="page">
   <small>P360 MOBILE</small>
-  <h2>🔄 Import / Export</h2>
+  <h2>✏️ Gérer les opérations</h2>
 
   <button class="principal"
     onclick="afficher('attente')">
@@ -223,7 +223,6 @@ input, select {
 <button onclick="ouvrirCompte('Blois')">Compte Blois</button>
 <button onclick="ouvrirCompte('Orléans')">Compte Orléans</button>
 <button onclick="ouvrirCompte('Oney')">Compte Oney</button>
-    </button>
   </div>
 
   <div class="actions">
@@ -314,7 +313,7 @@ input, select {
           placeholder="Ajouter une observation (facultatif)"></textarea>
     <div class="actions">
       <button type="button" class="retour"
-        onclick="afficher('accueil')">
+        onclick="annulerSaisie()">
         Annuler
       </button>
       <button type="submit" class="enregistrer">
@@ -777,6 +776,14 @@ function lireOperations() {
   }
 }
 
+function annulerSaisie() {
+  operationEnModification = null;
+  $("formulaire").reset();
+  $("date").value = dateLocale();
+  $("type").value = "debit";
+  afficher("accueil");
+}
+
 function afficher(page) {
   document.querySelectorAll(".page").forEach(
     element => element.classList.remove("active")
@@ -935,7 +942,8 @@ function afficherRecapEspagne(operation) {
       0
     );
 
-  const disponible = 1000 - total;
+  const plafond = Number(localStorage.getItem("p360_plafond_espagne")) || 1000;
+  const disponible = plafond - total;
 
   const euros = valeur =>
     valeur.toLocaleString("fr-FR", {
@@ -945,12 +953,12 @@ function afficherRecapEspagne(operation) {
 
   let alerte = "🟢 Plafond sous surveillance.";
 
-  if (total > 1000) {
+  if (total > plafond) {
     alerte = "🔴 Attention : plafond dépassé !";
-  } else if (total >= 900) {
-    alerte = "🟠 Seuil de 900 € atteint !";
-  } else if (total >= 800) {
-    alerte = "🟡 Seuil de 800 € atteint !";
+  } else if (total >= plafond * 0.90) {
+    alerte = "🟠 Seuil de 90 % du plafond atteint !";
+  } else if (total >= plafond * 0.80) {
+    alerte = "🟡 Seuil de 80 % du plafond atteint !";
   }
 
   const zone = $("detailsRecapEspagne");
@@ -1107,21 +1115,19 @@ if (
 
   const nouveauTotal = totalActuel + operation.montant;
 
-  if (nouveauTotal > 1000) {
+  const plafondEspagne = Number(localStorage.getItem("p360_plafond_espagne")) || 1000;
+  if (nouveauTotal > plafondEspagne) {
     const continuer = confirm(
       "⚠️ ATTENTION : PLAFOND CB ESPAGNE !\n\n" +
       "Dépenses après cette opération : " +
       nouveauTotal.toFixed(2) + " €\n" +
-      "Plafond mensuel : 1 000 €\n\n" +
+      "Plafond mensuel : " + plafondEspagne.toLocaleString("fr-FR") + " €\n\n" +
       "Veux-tu quand même enregistrer cette opération ?"
     );
 
     if (!continuer) {
       
-  $("formulaire").reset();
-  $("date").value = dateLocale();
-  operationEnModification = null;
-  afficher("accueil");
+  // Conserver la saisie si le dépassement du plafond est refusé.
   return;
 }
   }
