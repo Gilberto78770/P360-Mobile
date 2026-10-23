@@ -176,8 +176,8 @@ input, select, textarea {
   </button>
 
   <button class="principal"
-    onclick="importerConfirmationExcel()">
-    ✅ Confirmer les imports Excel
+    onclick="importerSynchronisationP360()">
+    🔄 Synchroniser avec Excel
   </button>
 
   <div class="actions">
@@ -603,168 +603,132 @@ function exporterVersExcel() {
   );
 }
 
-function importerConfirmationExcel() {
+const CLE_SYNC = "p360_synchronisation_test_v1";
+
+function lireSynchronisation() {
+  try { return JSON.parse(localStorage.getItem(CLE_SYNC)) || null; }
+  catch { return null; }
+}
+
+// CSV Excel: 7 champs, guillemets doubles, point-virgule, accents UTF-8.
+function analyserLigneCSV(ligne) {
+  const champs = [];
+  let texte = "", guillemets = false;
+  for (let i = 0; i < ligne.length; i++) {
+    const c = ligne[i];
+    if (c === '"') {
+      if (guillemets && ligne[i + 1] === '"') { texte += '"'; i++; }
+      else if (!guillemets && texte !== "") throw Error("Guillemets CSV invalides");
+      else guillemets = !guillemets;
+    } else if (c === ";" && !guillemets) {
+      champs.push(texte); texte = "";
+    } else { texte += c; }
+  }
+  if (guillemets) throw Error("Guillemets CSV non fermes");
+  champs.push(texte);
+  return champs;
+}
+
+function importerSynchronisationP360() {
   const selecteur = document.createElement("input");
   selecteur.type = "file";
   selecteur.accept = ".csv,text/csv";
-
-  selecteur.addEventListener("change", async function () {
+  selecteur.addEventListener("change", async () => {
     const fichier = selecteur.files[0];
     if (!fichier) return;
-
     try {
-      const contenu = (await fichier.text())
-        .replace(/^\uFEFF/, "")
-        .trim();
-
-      const lignes = contenu.split(/\r?\n/);
-
-      if (lignes[0].trim() !== "Identifiant;Statut") {
-        alert("Confirmation refusée : en-tête incorrect.");
-        return;
+      const contenu = (await fichier.text()).replace(/^\uFEFF/, "").trim();
+      const lignes = contenu.split(/\r?\n/).filter(l => l.trim());
+      if (lignes.shift() !== "Type;Compte;Identifiant;Date;Montant;Statut;Solde") {
+        throw Error("En-tete de synchronisation incorrect");
       }
-
-      const identifiants = new Set();
-
-      for (const ligne of lignes.slice(1)) {
-        if (!ligne.trim()) continue;
-
-        const correspondance = ligne.trim().match(
-          /^"((?:[^"]|"")+)";"importe"$/
-        );
-
-        if (!correspondance) {
-          alert("Confirmation refusée : ligne CSV invalide.");
-          return;
-        }
-
-        const id = correspondance[1].replace(/""/g, '"');
-
-        if (identifiants.has(id)) {
-          alert("Confirmation refusée : identifiant en double.");
-          return;
-        }
-
-        identifiants.add(id);
+      const comptes = ["Courant", "Joint", "Espagne", "Blois", "Orléans", "Oney"];
+      const soldes = {}, confirmations = new Set(), cb = [], idsCB = new Set();
+      const nombre = v => {
+        if (!/^-?\d+(?:\.\d+)?$/.test(v)) throw Error("Montant non numerique : " + v);
+        const n = Number(v);
+        if (!Number.isFinite(n)) throw Error("Montant invalide");
+        return n;
+      };
+      for (const ligne of lignes) {
+        const v = analyserLigneCSV(ligne);
+        if (v.length !== 7) throw Error("Ligne de synchronisation invalide");
+        const [type, compte, id, date, montant, statut, solde] = v;
+        if (!comptes.includes(compte)) throw Error("Compte inconnu : " + compte);
+        if (type === "SOLDE") {
+          if (Object.hasOwn(soldes, compte)) throw Error("Solde en double : " + compte);
+          soldes[compte] = nombre(solde);
+        } else if (type === "CONFIRMATION") {
+          if (!id || statut !== "importe" || confirmations.has(id)) throw Error("Confirmation invalide ou en double");
+          confirmations.add(id);
+        } else if (type === "CB") {
+          if (compte !== "Espagne" || !id || idsCB.has(id) || !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+              !["EN_ATTENTE", "RAPPROCHE"].includes(statut)) throw Error("Ligne CB invalide");
+          idsCB.add(id);
+          cb.push({id, date, montant: nombre(montant), statut});
+        } else throw Error("Type de ligne inconnu : " + type);
       }
-
-      if (identifiants.size === 0) {
-        alert("Aucun identifiant à confirmer.");
-        return;
-      }
-
+      if (Object.keys(soldes).length !== 6) throw Error("Les six soldes sont obligatoires");
       const operations = lireOperations();
-
-      const aConfirmer = operations.filter(op =>
-        identifiants.has(op.id) &&
-        op.statut === "en_attente"
-      );
-
-      if (aConfirmer.length === 0) {
-        alert(
-          "Aucune nouvelle opération à confirmer.\n" +
-          "Les opérations sont peut-être déjà confirmées."
-        );
-        return;
+      const nb = operations.filter(op => confirmations.has(op.id) && op.statut === "en_attente").length;
+      if (!confirm("Synchronisation reconnue :\n6 soldes, " + confirmations.size +
+          " confirmations, " + cb.length + " lignes CB Espagne.\n" + nb +
+          " operation(s) a confirmer sur cet iPhone.\n\nAppliquer la synchronisation ?")) return;
+      // Sauvegarde de secours dans le meme stockage avant toute actualisation.
+      const precedent = localStorage.getItem(CLE);
+      const ancienneSync = localStorage.getItem(CLE_SYNC);
+      const actualisees = operations.map(op => confirmations.has(op.id) && op.statut === "en_attente"
+        ? {...op, statut: "importe", dateConfirmationImport: new Date().toISOString()} : op);
+      try {
+        localStorage.setItem(CLE, JSON.stringify(actualisees));
+        localStorage.setItem(CLE_SYNC, JSON.stringify({soldes, cb, dateSynchronisation: new Date().toISOString()}));
+      } catch (e) {
+        try {
+          if (precedent === null) localStorage.removeItem(CLE); else localStorage.setItem(CLE, precedent);
+          if (ancienneSync === null) localStorage.removeItem(CLE_SYNC); else localStorage.setItem(CLE_SYNC, ancienneSync);
+        } catch (_) {}
+        throw Error("Stockage impossible ; restauration tentee");
       }
-
-      const accord = confirm(
-        "Confirmation Excel reconnue.\n\n" +
-        identifiants.size + " identifiant(s) dans le fichier.\n" +
-        aConfirmer.length + " opération(s) à confirmer.\n\n" +
-        "Confirmer leur importation dans Excel ?"
-      );
-
-      if (!accord) return;
-
-      const operationsActualisees = operations.map(op => {
-        if (
-          identifiants.has(op.id) &&
-          op.statut === "en_attente"
-        ) {
-          return {
-            ...op,
-            statut: "importe",
-            dateConfirmationImport: new Date().toISOString()
-          };
-        }
-
-        return op;
-      });
-
-      localStorage.setItem(
-        CLE,
-        JSON.stringify(operationsActualisees)
-      );
-
-      alert(
-        aConfirmer.length +
-        " opération(s) confirmée(s) avec succès.\n" +
-        "Aucune opération supprimée."
-      );
-
-      afficher("attente");
-
-    } catch (erreur) {
-      alert(
-        "Impossible de traiter la confirmation Excel.\n" +
-        "Aucune opération modifiée si la lecture a échoué."
-      );
-    }
+      alert("Synchronisation terminee. " + nb + " operation(s) confirmee(s). Aucune operation supprimee.");
+      afficher("menuTransferts");
+    } catch (erreur) { alert("Synchronisation refusee : " + erreur.message); }
   });
-
   selecteur.click();
 }
 
 function ouvrirCompte(nomCompte) {
-  const operations = lireOperations()
-    .filter(op => op.compte === nomCompte)
+  const operations = lireOperations().filter(op => op.compte === nomCompte && op.statut === "en_attente")
     .sort((a, b) => b.date.localeCompare(a.date));
-
+  const sync = lireSynchronisation();
   $("titreCompte").textContent = "Compte " + nomCompte;
-
-  $("resumeCompte").textContent =
-    operations.length +
-    " opération(s) enregistrée(s) sur cet appareil.";
-
+  const euro = n => n.toLocaleString("fr-FR", {style:"currency",currency:"EUR"});
+  if (sync && Object.hasOwn(sync.soldes, nomCompte)) {
+    const attente = operations.reduce((s, op) => s + (op.type === "debit" ? -op.montant : op.montant), 0);
+    $("resumeCompte").textContent = "Solde Excel : " + euro(sync.soldes[nomCompte]) +
+      " · Solde estime : " + euro(sync.soldes[nomCompte] + attente) +
+      " · " + operations.length + " operation(s) en attente.";
+  } else {
+    $("resumeCompte").textContent = operations.length +
+      " operation(s) en attente. Solde Excel non encore synchronise.";
+  }
   const liste = $("listeCompte");
   liste.replaceChildren();
-
-  if (operations.length === 0) {
+  if (!operations.length) {
     const message = document.createElement("p");
-    message.textContent = "Aucune opération enregistrée.";
+    message.textContent = "Aucune operation en attente.";
     liste.appendChild(message);
   }
-
   operations.slice(0, 20).forEach(op => {
-    const bloc = document.createElement("div");
-    bloc.className = "operation";
-
-    const titre = document.createElement("strong");
-    titre.textContent = op.tiers;
-
+    const bloc = document.createElement("div"); bloc.className = "operation";
+    const titre = document.createElement("strong"); titre.textContent = op.tiers;
     const details = document.createElement("span");
-    details.textContent =
-      op.date + " · " + op.categorie +
-      " · " + (op.statut === "importe"
-        ? "Importée dans Excel"
-        : "En attente");
-if (op.description) {
-  details.textContent +=
-    " · " + op.description;
-}
+    details.textContent = op.date + " · " + op.categorie + " · En attente" +
+      (op.description ? " · " + op.description : "");
     const montant = document.createElement("div");
-    montant.className =
-      "montant " + (op.type === "debit" ? "debit" : "credit");
-
-    montant.textContent =
-      (op.type === "debit" ? "−" : "+") +
-      op.montant.toFixed(2).replace(".", ",") + " €";
-
-    bloc.append(titre, details, montant);
-    liste.appendChild(bloc);
+    montant.className = "montant " + (op.type === "debit" ? "debit" : "credit");
+    montant.textContent = (op.type === "debit" ? "−" : "+") + euro(op.montant);
+    bloc.append(titre, details, montant); liste.appendChild(bloc);
   });
-
   afficher("detailCompte");
 }
 
@@ -931,16 +895,14 @@ function afficherRecapEspagne(operation) {
   const operations = lireOperations();
   const mois = operation.date.slice(0, 7);
 
-  const total = operations
-    .filter(op =>
-      op.compte === "Espagne" &&
-      op.paiement === "Carte Bancaire" &&
-      op.date.startsWith(mois)
-    )
-    .reduce((somme, op) =>
-      somme + (op.type === "debit" ? op.montant : -op.montant),
-      0
-    );
+  const sync = lireSynchronisation();
+  const idsExcel = new Set((sync?.cb || []).map(op => op.id));
+  const total = operations.filter(op => op.compte === "Espagne" &&
+      op.paiement === "Carte Bancaire" && op.statut === "en_attente" &&
+      op.date.startsWith(mois) && !idsExcel.has(op.id))
+    .reduce((somme, op) => somme + (op.type === "debit" ? op.montant : -op.montant), 0)
+    + (sync?.cb || []).filter(op => op.date.startsWith(mois))
+      .reduce((somme, op) => somme + op.montant, 0);
 
   const plafond = Number(localStorage.getItem("p360_plafond_espagne")) || 1000;
   const disponible = plafond - total;
@@ -1005,57 +967,42 @@ function modifierPlafondEspagne() {
 }
 function calculerCBEspagne() {
   const operations = lireOperations();
-
+  const sync = lireSynchronisation();
   const maintenant = new Date();
-  const mois = maintenant.getFullYear() + "-" +
-    String(maintenant.getMonth() + 1).padStart(2, "0");
-
-  const depenses = operations
-    .filter(op =>
-      op.compte === "Espagne" &&
-      op.paiement === "Carte Bancaire" &&
-      op.date.startsWith(mois)
-    )
-    .reduce((total, op) => {
-      return total + (
-        op.type === "debit" ? op.montant : -op.montant
-      );
-    }, 0);
-
+  const mois = maintenant.getFullYear() + "-" + String(maintenant.getMonth() + 1).padStart(2, "0");
+  const localCB = operations.filter(op => op.compte === "Espagne" &&
+    op.paiement.toLowerCase() === "carte bancaire" && op.statut === "en_attente");
+  const cbExcel = sync?.cb || [];
+  const idsExcel = new Set(cbExcel.map(op => op.id));
+  const cbMois = cbExcel.filter(op => op.date.startsWith(mois))
+    .reduce((s, op) => s + op.montant, 0);
+  const cbLocalMois = localCB.filter(op => op.date.startsWith(mois) && !idsExcel.has(op.id))
+    .reduce((s, op) => s + (op.type === "debit" ? op.montant : -op.montant), 0);
+  const depenses = cbMois + cbLocalMois;
   const plafond = Number(localStorage.getItem("p360_plafond_espagne")) || 1000;
-  const disponible = plafond - depenses;
-  
-$("plafondEspagne").textContent = plafond.toLocaleString("fr-FR") + " €";
-  
-  const euros = valeur =>
-    valeur.toLocaleString("fr-FR", {
-      style: "currency",
-      currency: "EUR"
-    });
-
-  let alerte = "🟢 Plafond sous surveillance.";
-
-  if (depenses > plafond) {
-    alerte = "🔴 Attention : plafond dépassé !";
-  } else if (depenses >= plafond * 0.90) {
-    alerte = "🟠 Alerte : 90 % du plafond atteint !";
-  } else if (depenses >= plafond * 0.80) {
-    alerte = "🟡 Alerte : 80 % du plafond atteint !";
-  }
-
-  const zone = $("suiviEspagne");
-  zone.replaceChildren();
-
+  const euro = n => n.toLocaleString("fr-FR", {style:"currency",currency:"EUR"});
+  $("plafondEspagne").textContent = euro(plafond);
+  const zone = $("suiviEspagne"); zone.replaceChildren();
+  const attenteExcel = cbExcel.filter(op => op.statut === "EN_ATTENTE");
+  const encours = attenteExcel.reduce((s, op) => s + op.montant, 0) +
+    localCB.filter(op => !idsExcel.has(op.id))
+      .reduce((s, op) => s + (op.type === "debit" ? op.montant : -op.montant), 0);
   const lignes = [
-    "Dépenses du mois : " + euros(depenses),
-    "Disponible estimé : " + euros(disponible),
-    alerte
+    "Depenses du mois (Excel + iPhone) : " + euro(depenses),
+    "Disponible estime sur le plafond : " + euro(plafond - depenses),
+    "Encours CB non rapproche estime : " + euro(encours),
+    "Operations CB Excel en attente : " + attenteExcel.length,
+    "Operations CB iPhone en attente de transfert : " + localCB.length,
+    depenses > plafond ? "🔴 Plafond depasse" : depenses >= plafond * .9 ? "🟠 Seuil 90 %" : depenses >= plafond * .8 ? "🟡 Seuil 80 %" : "🟢 Plafond sous surveillance"
   ];
-
-  lignes.forEach(texte => {
-    const paragraphe = document.createElement("p");
-    paragraphe.textContent = texte;
-    zone.append(paragraphe);
+  lignes.forEach(t => { const p = document.createElement("p"); p.textContent = t; zone.append(p); });
+  const parMois = {};
+  attenteExcel.forEach(op => { (parMois[op.date.slice(0,7)] ||= []).push(op); });
+  Object.keys(parMois).sort().reverse().forEach(m => {
+    const titre = document.createElement("h3"); titre.textContent = "CB non rapprochee · " + m; zone.append(titre);
+    parMois[m].forEach(op => {
+      const p = document.createElement("p"); p.textContent = op.date + " · " + euro(op.montant); zone.append(p);
+    });
   });
 }
 
