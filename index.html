@@ -110,6 +110,12 @@ input, select, textarea {
 }
 .debit { color: #bd3747; }
 .credit { color: #19805a; }
+ .ajustement-compte { margin: 14px 0 20px; }
+ .ligne-ajustement { display: flex; gap: 6px; align-items: center; }
+ .ligne-ajustement input { flex: 1; min-width: 0; }
+ .ligne-ajustement button { padding: 12px 8px; border: 0; border-radius: 9px; font-weight: bold; }
+ .resume-solde { margin: 8px 0; }
+ .resume-solde.resultat { font-weight: bold; font-size: 19px; }
  #menuTransferts > button.principal {
   display: block;
   width: 100%;
@@ -237,7 +243,16 @@ input, select, textarea {
   <small>P360 MOBILE · MES COMPTES</small>
   <h2 id="titreCompte">Compte</h2>
 
-  <p id="resumeCompte"></p>
+  <div id="resumeCompte" aria-live="polite"></div>
+  <div id="zoneAjustement" class="ajustement-compte" hidden>
+    <label for="ajustementCompte">Ajustement manuel (+ ou −) en €</label>
+    <div class="ligne-ajustement">
+      <input id="ajustementCompte" type="text" inputmode="decimal" placeholder="0,00" aria-describedby="aideAjustement">
+      <button type="button" class="retour" onclick="enregistrerAjustementCompte()">Enregistrer</button>
+      <button type="button" class="retour" onclick="reinitialiserAjustementCompte()">0 €</button>
+    </div>
+    <small id="aideAjustement">Indique l'écart par rapport au solde Excel, par exemple −643,05.</small>
+  </div>
 
   <h3>Dernières opérations</h3>
   <div id="listeCompte"></div>
@@ -604,6 +619,42 @@ function exporterVersExcel() {
 }
 
 const CLE_SYNC = "p360_synchronisation_test_v1";
+const CLE_AJUSTEMENTS = "p360_ajustements_manuels_v1";
+let compteAffiche = null;
+
+function lireAjustements() {
+  try {
+    const valeur = JSON.parse(localStorage.getItem(CLE_AJUSTEMENTS) || "{}");
+    return valeur && typeof valeur === "object" && !Array.isArray(valeur) ? valeur : {};
+  } catch { return {}; }
+}
+function montantEuro(n) {
+  return n.toLocaleString("fr-FR", {style: "currency", currency: "EUR"});
+}
+function enregistrerAjustementCompte() {
+  if (!compteAffiche) return;
+  const saisie = $("ajustementCompte").value.trim().replace(/\s/g, "").replace(/\u2212/g, "-").replace(",", ".");
+  if (!/^[+-]?(?:\d+(?:\.\d{1,2})?|\.\d{1,2})$/.test(saisie)) {
+    alert("Saisis un montant valide, par exemple -643,05 ou 25,00.");
+    return;
+  }
+  const montant = Math.round(Number(saisie) * 100) / 100;
+  if (!Number.isFinite(montant)) return;
+  const ajustements = lireAjustements();
+  ajustements[compteAffiche] = montant;
+  try { localStorage.setItem(CLE_AJUSTEMENTS, JSON.stringify(ajustements)); }
+  catch { alert("Impossible d'enregistrer l'ajustement."); return; }
+  ouvrirCompte(compteAffiche);
+}
+function reinitialiserAjustementCompte() {
+  if (!compteAffiche) return;
+  $("ajustementCompte").value = "0";
+  enregistrerAjustementCompte();
+}
+function adapterPayeurAuCompte() {
+  if ($("compte").value === "Joint") $("payePar").value = "Nous 2";
+}
+$("compte").addEventListener("change", adapterPayeurAuCompte);
 
 function lireSynchronisation() {
   try { return JSON.parse(localStorage.getItem(CLE_SYNC)) || null; }
@@ -677,15 +728,20 @@ function importerSynchronisationP360() {
       // Sauvegarde de secours dans le meme stockage avant toute actualisation.
       const precedent = localStorage.getItem(CLE);
       const ancienneSync = localStorage.getItem(CLE_SYNC);
+      const anciensAjustements = localStorage.getItem(CLE_AJUSTEMENTS);
       const actualisees = operations.map(op => confirmations.has(op.id) && op.statut === "en_attente"
         ? {...op, statut: "importe", dateConfirmationImport: new Date().toISOString()} : op);
       try {
         localStorage.setItem(CLE, JSON.stringify(actualisees));
         localStorage.setItem(CLE_SYNC, JSON.stringify({soldes, cb, dateSynchronisation: new Date().toISOString()}));
+        // Une nouvelle synchronisation invalide les corrections de l'ancien solde Excel.
+        localStorage.removeItem(CLE_AJUSTEMENTS);
       } catch (e) {
         try {
           if (precedent === null) localStorage.removeItem(CLE); else localStorage.setItem(CLE, precedent);
           if (ancienneSync === null) localStorage.removeItem(CLE_SYNC); else localStorage.setItem(CLE_SYNC, ancienneSync);
+          if (anciensAjustements === null) localStorage.removeItem(CLE_AJUSTEMENTS);
+          else localStorage.setItem(CLE_AJUSTEMENTS, anciensAjustements);
         } catch (_) {}
         throw Error("Stockage impossible ; restauration tentee");
       }
@@ -697,21 +753,38 @@ function importerSynchronisationP360() {
 }
 
 function ouvrirCompte(nomCompte) {
+  compteAffiche = nomCompte;
   const operations = lireOperations().filter(op => op.compte === nomCompte && op.statut === "en_attente")
     .sort((a, b) => b.date.localeCompare(a.date));
   const sync = lireSynchronisation();
   $("titreCompte").textContent = "Compte " + nomCompte;
-  const euro = n => n.toLocaleString("fr-FR", {style:"currency",currency:"EUR"});
-  if (sync && Object.hasOwn(sync.soldes, nomCompte)) {
-    const attente = operations.reduce((s, op) => s + (op.type === "debit" ? -op.montant : op.montant), 0);
-    $("resumeCompte").textContent = "Solde Excel : " + euro(sync.soldes[nomCompte]) +
-      " · Solde estime : " + euro(sync.soldes[nomCompte] + attente) +
-      " · " + operations.length + " operation(s) en attente.";
-  } else {
-    $("resumeCompte").textContent = operations.length +
-      " operation(s) en attente. Solde Excel non encore synchronise.";
+  const euro = montantEuro;
+  const resume = $("resumeCompte");
+  resume.replaceChildren();
+  const zone = $("zoneAjustement");
+  function ligne(texte, valeur, resultat = false) {
+    const p = document.createElement("p");
+    p.className = "resume-solde" + (resultat ? " resultat" : "");
+    p.textContent = texte + " : " + valeur;
+    resume.appendChild(p);
   }
-  const liste = $("listeCompte");
+  if (sync && sync.soldes && Object.hasOwn(sync.soldes, nomCompte)) {
+    const solde = Number(sync.soldes[nomCompte]);
+    const ajustement = Number(lireAjustements()[nomCompte]) || 0;
+    const attente = operations.reduce((s, op) => s + (op.type === "debit" ? -op.montant : op.montant), 0);
+    ligne("Solde synchronisé Excel", euro(solde));
+    ligne("Ajustement manuel", (ajustement > 0 ? "+" : "") + euro(ajustement));
+    ligne("Solde corrigé", euro(solde + ajustement), true);
+    ligne("Opérations iPhone en attente (" + operations.length + ")", euro(attente));
+    ligne("Solde estimé après opérations en attente", euro(solde + ajustement + attente), true);
+    $("ajustementCompte").value = String(ajustement).replace(".", ",");
+    zone.hidden = false;
+  } else {
+    ligne("Opérations en attente", String(operations.length));
+    ligne("Solde Excel", "non encore synchronisé");
+    zone.hidden = true;
+  }
+const liste = $("listeCompte");
   liste.replaceChildren();
   if (!operations.length) {
     const message = document.createElement("p");
