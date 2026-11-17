@@ -125,6 +125,38 @@ input, select, textarea {
   font-size: 16px;
   text-align: center;
 } 
+
+/* Navigation accessible pendant le défilement des écrans longs */
+.navigation-fixe {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  gap: 8px;
+  margin: -24px -20px 16px;
+  padding: 12px 20px;
+  padding-top: max(12px, env(safe-area-inset-top));
+  background: rgba(255,255,255,.98);
+  border-bottom: 1px solid #dce3ed;
+}
+.navigation-fixe button {
+  flex: 1;
+  min-height: 44px;
+  padding: 9px 6px;
+  border: 0;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: bold;
+}
+.navigation-fixe .nouvelle-rapide { background: #254c83; color: white; }
+.total-attente {
+  padding: 12px;
+  background: #f5f7fa;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: bold;
+}
+.total-attente small { display: block; margin-top: 5px; font-weight: normal; }
 </style>
 
 <link rel="manifest" href="./manifest.json">
@@ -168,6 +200,7 @@ input, select, textarea {
 </section>
 
 <section id="menuTransferts" class="page">
+
   <small>P360 MOBILE</small>
   <h2>✏️ Gérer les opérations</h2>
 
@@ -266,6 +299,10 @@ input, select, textarea {
 </section>
 
 <section id="saisie" class="page">
+  <nav class="navigation-fixe" aria-label="Navigation rapide">
+    <button type="button" class="retour" onclick="retourAccueil()">⌂ Accueil</button>
+  </nav>
+
   <small>P360 MOBILE</small>
   <h2>Nouvelle opération</h2>
 
@@ -340,6 +377,11 @@ input, select, textarea {
 </section>
 
 <section id="recapEspagne" class="page">
+  <nav class="navigation-fixe" aria-label="Navigation rapide">
+    <button type="button" class="retour" onclick="retourAccueil()">⌂ Accueil</button>
+    <button type="button" class="nouvelle-rapide" onclick="nouvelleOperation()">＋ Nouvelle opération</button>
+  </nav>
+
   <small>P360 MOBILE · ESPAGNE</small>
 
   <h2>✅ Opération enregistrée</h2>
@@ -389,9 +431,15 @@ input, select, textarea {
 
 
 <section id="attente" class="page">
+  <nav class="navigation-fixe" aria-label="Navigation rapide">
+    <button type="button" class="retour" onclick="retourAccueil()">⌂ Accueil</button>
+    <button type="button" class="nouvelle-rapide" onclick="nouvelleOperation()">＋ Nouvelle opération</button>
+  </nav>
+
   <small>P360 MOBILE</small>
   <h2>Opérations en attente</h2>
   <p id="compteur"></p>
+  <p id="totalAttente" class="total-attente" aria-live="polite"></p>
   <div id="liste"></div>
   <div class="actions">
     <button class="retour"
@@ -822,11 +870,25 @@ function annulerSaisie() {
   afficher("accueil");
 }
 
+function retourAccueil() {
+  // La navigation n'efface jamais les opérations déjà enregistrées.
+  afficher("accueil");
+}
+
+function nouvelleOperation() {
+  operationEnModification = null;
+  $("formulaire").reset();
+  $("date").value = dateLocale();
+  $("type").value = "debit";
+  afficher("saisie");
+}
+
 function afficher(page) {
   document.querySelectorAll(".page").forEach(
     element => element.classList.remove("active")
   );
   $(page).classList.add("active");
+  window.scrollTo(0, 0);
 
   if (page === "saisie") {
   $("date").value ||= dateLocale();
@@ -857,6 +919,17 @@ function afficherOperations() {
 );
   $("compteur").textContent =
     `${operations.length} opération(s) enregistrée(s)`;
+
+  // Solde informatif : débits négatifs, crédits positifs.
+  // Ne change ni les opérations, ni les soldes des comptes.
+  const totalCentimes = operations.reduce((total, op) =>
+    total + (op.type === "debit" ? -1 : 1) * Math.round(op.montant * 100), 0);
+  $("totalAttente").replaceChildren();
+  const texteTotal = document.createElement("span");
+  texteTotal.textContent = "Total net en attente : " + montantEuro(totalCentimes / 100);
+  const noteTotal = document.createElement("small");
+  noteTotal.textContent = "Information uniquement · crédits moins débits · tous comptes confondus";
+  $("totalAttente").append(texteTotal, noteTotal);
 
   $("liste").replaceChildren();
 
