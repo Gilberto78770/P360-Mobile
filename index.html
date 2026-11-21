@@ -157,6 +157,8 @@ input, select, textarea {
   font-weight: bold;
 }
 .total-attente small { display: block; margin-top: 5px; font-weight: normal; }
+.case-ticket { display: flex; align-items: center; gap: 10px; margin: 17px 0 12px; cursor: pointer; }
+.case-ticket input[type="checkbox"] { width: 19px; height: 19px; margin: 0; padding: 0; flex: 0 0 19px; accent-color: #254c83; }
 </style>
 
 <link rel="manifest" href="./manifest.json">
@@ -361,7 +363,8 @@ input, select, textarea {
   <option value="Nous 2">Nous 2</option>
   <option value="Autres">Autres</option>
 </select>
-<label for="description">Description</label>
+ <label class="case-ticket" for="recuTicket"><input id="recuTicket" type="checkbox" checked> Reçu / Ticket disponible</label>
+ <label for="description">Description</label>
 <textarea id="description" rows="3"
           placeholder="Ajouter une observation (facultatif)"></textarea>
     <div class="actions">
@@ -619,7 +622,8 @@ function exporterVersExcel() {
     "Mode de paiement",
     "Payé par",
     "Description",
-    "Statut"
+    "Statut",
+    "Reçu / Ticket"
   ];
 
   const echapperCSV = valeur => {
@@ -640,7 +644,8 @@ function exporterVersExcel() {
       op.paiement,
       op.payePar,
       op.description || "",
-      op.statut
+      op.statut,
+      op.recuTicket === true ? "Oui" : op.recuTicket === false ? "Non" : "Non renseigné"
     ].map(echapperCSV).join(";"))
   ];
 
@@ -845,7 +850,8 @@ const liste = $("listeCompte");
     const titre = document.createElement("strong"); titre.textContent = op.tiers;
     const details = document.createElement("span");
     details.textContent = op.date + " · " + op.categorie + " · En attente" +
-      (op.description ? " · " + op.description : "");
+      (op.description ? " · " + op.description : "") +
+      " · Ticket : " + (op.recuTicket === true ? "Oui" : op.recuTicket === false ? "Non" : "Non renseigné");
     const montant = document.createElement("div");
     montant.className = "montant " + (op.type === "debit" ? "debit" : "credit");
     montant.textContent = (op.type === "debit" ? "−" : "+") + euro(op.montant);
@@ -954,6 +960,7 @@ if (op.description) {
   details.textContent +=
     " · " + op.description;
 }
+details.textContent += " · Ticket : " + (op.recuTicket === true ? "Oui" : op.recuTicket === false ? "Non" : "Non renseigné");
     
 const boutons = document.createElement("div");
 boutons.className = "actions";
@@ -1030,6 +1037,7 @@ function modifierOperation(id) {
   $("paiement").value = operation.paiement;
   $("payePar").value = operation.payePar;
   $("description").value = operation.description || "";
+  $("recuTicket").checked = operation.recuTicket === true;
   alert(
     "Les informations sont chargées dans le formulaire. " +
     "Nous allons maintenant préparer leur enregistrement."
@@ -1182,7 +1190,8 @@ id: "Appli-" + Date.now() + "-" + Math.random().toString(36).slice(2),
     categorie: $("categorie").value.trim(),
     paiement: $("paiement").value,
     payePar: $("payePar").value.trim(),
-    description: $("description").value.trim(),
+     description: $("description").value.trim(),
+     recuTicket: $("recuTicket").checked,
     statut: "en_attente"
   };
 
