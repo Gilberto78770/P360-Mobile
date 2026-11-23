@@ -1,0 +1,1297 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P360 Mobile</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: #edf1f6;
+  font-family: Arial, sans-serif;
+  color: #26344b;
+}
+.app {
+  max-width: 430px;
+  min-height: 100vh;
+  margin: auto;
+  padding: 24px 20px;
+  background: white;
+}
+h1 { font-size: 26px; }
+h2 { font-size: 21px; }
+small { color: #69788b; }
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+.principal {
+  width: 100%;
+  padding: 24px;
+  margin: 25px 0;
+  border: 0;
+  border-radius: 16px;
+  background: #254c83;
+  color: white;
+  font-size: 21px;
+  font-weight: bold;
+}
+.menu {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.menu button {
+  padding: 20px 8px;
+  min-height: 90px;
+  background: #f5f7fa;
+  border: 1px solid #dce3ed;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: bold;
+}
+.page { display: none; }
+.page.active { display: block; }
+label {
+  display: block;
+  margin: 15px 0 6px;
+  font-weight: bold;
+  font-size: 14px;
+}
+input, select, textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  font-size: 16px;
+  background: white;
+}
+.ligne {
+  display: flex;
+  gap: 10px;
+}
+.ligne > div { flex: 1; min-width: 0; }
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+}
+.actions button {
+  flex: 1;
+  padding: 14px 8px;
+  border-radius: 10px;
+  border: 0;
+  font-weight: bold;
+}
+.enregistrer {
+  background: #254c83;
+  color: white;
+}
+.retour {
+  background: #e8edf4;
+  font-size: 16px;
+}
+.operation {
+  padding: 14px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+.operation strong { display: block; }
+.operation span {
+  display: block;
+  margin-top: 5px;
+  font-size: 13px;
+  color: #69788b;
+}
+.montant {
+  font-weight: bold;
+  margin-top: 7px;
+}
+.debit { color: #bd3747; }
+.credit { color: #19805a; }
+ .ajustement-compte { margin: 14px 0 20px; }
+ .ligne-ajustement { display: flex; gap: 6px; align-items: center; }
+ .ligne-ajustement input { flex: 1; min-width: 0; }
+ .ligne-ajustement button { padding: 12px 8px; border: 0; border-radius: 9px; font-weight: bold; }
+ .resume-solde { margin: 8px 0; }
+ .resume-solde.resultat { font-weight: bold; font-size: 19px; }
+ #menuTransferts > button.principal {
+  display: block;
+  width: 100%;
+  min-height: 60px;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+  font-size: 16px;
+  text-align: center;
+} 
+
+/* Navigation accessible pendant le défilement des écrans longs */
+.navigation-fixe {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  gap: 8px;
+  margin: -24px -20px 16px;
+  padding: 12px 20px;
+  padding-top: max(12px, env(safe-area-inset-top));
+  background: rgba(255,255,255,.98);
+  border-bottom: 1px solid #dce3ed;
+}
+.navigation-fixe button {
+  flex: 1;
+  min-height: 44px;
+  padding: 9px 6px;
+  border: 0;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: bold;
+}
+.navigation-fixe .nouvelle-rapide { background: #254c83; color: white; }
+.total-attente {
+  padding: 12px;
+  background: #f5f7fa;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: bold;
+}
+.total-attente small { display: block; margin-top: 5px; font-weight: normal; }
+.case-ticket { display: flex; align-items: center; gap: 10px; margin: 17px 0 12px; cursor: pointer; }
+.case-ticket input[type="checkbox"] { width: 19px; height: 19px; margin: 0; padding: 0; flex: 0 0 19px; accent-color: #254c83; }
+</style>
+
+<link rel="manifest" href="./manifest.json">
+
+<link rel="apple-touch-icon" href="./p360-apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="P360 Mobile">
+
+</head>
+<body>
+<main class="app">
+
+<section id="accueil" class="page active">
+  <small>PATRIMOINE 360</small>
+  <h1>Bienvenue 👋</h1>
+
+  <button class="principal"
+    onclick="afficher('saisie')">
+    ＋ Nouvelle opération
+  </button>
+
+  
+<div class="menu">
+  <button onclick="afficher('menuComptes')">
+    🏦 Mes comptes
+  </button>
+
+  <button onclick="afficher('espagne')">
+    💳 CB Espagne
+  </button>
+
+  <button onclick="afficher('menuTransferts')">
+    ✏️ Gérer les opérations
+  </button>
+
+  <button onclick="afficher('menuSauvegardes')">
+    💾 Sauvegardes
+  </button>
+</div>
+
+</section>
+
+<section id="menuTransferts" class="page">
+
+  <small>P360 MOBILE</small>
+  <h2>✏️ Gérer les opérations</h2>
+
+  <button class="principal"
+    onclick="afficher('attente')">
+    📋 Opérations en attente
+  </button>
+
+  <button class="principal"
+    onclick="exporterVersExcel()">
+    📤 Exporter vers Excel
+  </button>
+
+  <button class="principal"
+    onclick="importerSynchronisationP360()">
+    🔄 Synchroniser avec Excel
+  </button>
+
+  <div class="actions">
+    <button class="retour"
+      onclick="afficher('accueil')">
+      Retour à l'accueil
+    </button>
+  </div>
+</section>
+
+<section id="menuSauvegardes" class="page">
+  <small>P360 MOBILE</small>
+  <h2>💾 Sauvegardes</h2>
+
+  <button class="principal"
+    onclick="exporterSauvegarde()">
+    💾 Exporter une sauvegarde
+  </button>
+
+  <button class="principal"
+    onclick="importerSauvegarde()">
+    📂 Importer une sauvegarde
+  </button>
+
+  <div class="actions">
+    <button class="retour"
+      onclick="afficher('accueil')">
+      Retour à l'accueil
+    </button>
+  </div>
+</section>
+
+<section id="menuComptes" class="page">
+  <small>P360 MOBILE</small>
+  <h2>🏦 Mes comptes</h2>
+
+  <p>Sélectionne un compte pour consulter ses opérations.</p>
+
+  <div class="menu">
+<button onclick="ouvrirCompte('Courant')">Compte Courant</button>
+<button onclick="ouvrirCompte('Joint')">Compte Joint</button>
+<button onclick="ouvrirCompte('Espagne')">Compte Espagne</button>
+<button onclick="ouvrirCompte('Blois')">Compte Blois</button>
+<button onclick="ouvrirCompte('Orléans')">Compte Orléans</button>
+<button onclick="ouvrirCompte('Oney')">Compte Oney</button>
+  </div>
+
+  <div class="actions">
+    <button class="retour"
+      onclick="afficher('accueil')">
+      Retour à l'accueil
+    </button>
+  </div>
+</section>
+
+<section id="detailCompte" class="page">
+  <small>P360 MOBILE · MES COMPTES</small>
+  <h2 id="titreCompte">Compte</h2>
+
+  <div id="resumeCompte" aria-live="polite"></div>
+  <div id="zoneAjustement" class="ajustement-compte" hidden>
+    <label for="ajustementCompte">Ajustement manuel (+ ou −) en €</label>
+    <div class="ligne-ajustement">
+      <input id="ajustementCompte" type="text" inputmode="decimal" placeholder="0,00" aria-describedby="aideAjustement">
+      <button type="button" class="retour" onclick="enregistrerAjustementCompte()">Enregistrer</button>
+      <button type="button" class="retour" onclick="reinitialiserAjustementCompte()">0 €</button>
+    </div>
+    <small id="aideAjustement">Indique l'écart par rapport au solde Excel, par exemple −643,05.</small>
+  </div>
+
+  <h3>Dernières opérations</h3>
+  <div id="listeCompte"></div>
+
+  <div class="actions">
+    <button class="retour"
+      onclick="afficher('menuComptes')">
+      Retour aux comptes
+    </button>
+  </div>
+</section>
+
+<section id="saisie" class="page">
+  <nav class="navigation-fixe" aria-label="Navigation rapide">
+    <button type="button" class="retour" onclick="retourAccueil()">⌂ Accueil</button>
+  </nav>
+
+  <small>P360 MOBILE</small>
+  <h2>Nouvelle opération</h2>
+
+  <form id="formulaire">
+    <label for="compte">Compte</label>
+    <select id="compte" required>
+      <option>Courant</option>
+      <option>Joint</option>
+      <option>Espagne</option>
+      <option>Blois</option>
+      <option>Orléans</option>
+      <option>Oney</option>
+    </select>
+
+    <div class="ligne">
+      <div>
+        <label for="type">Débit / Crédit</label>
+        <select id="type">
+          <option value="debit">Débit</option>
+          <option value="credit">Crédit</option>
+        </select>
+      </div>
+      <div>
+        <label for="montant">Montant (€)</label>
+        <input id="montant" type="number"
+          min="0.01" step="0.01"
+          placeholder="0,00" required>
+      </div>
+    </div>
+
+    <label for="date">Date</label>
+    <input id="date" type="date" required>
+
+    <label for="tiers">Tiers</label>
+    <input id="tiers" type="text"
+      placeholder="Ex. Carrefour" required>
+
+    <label for="categorie">Catégorie</label>
+    <input id="categorie" type="text"
+      placeholder="Ex. Courses" required>
+
+    <label for="paiement">Mode de paiement</label>
+    <select id="paiement">
+      <option>Carte Bancaire</option>
+      <option>Espèces</option>
+      <option>Virement</option>
+      <option>Prélèvement</option>
+      <option>Chèque</option>
+    </select>
+
+    <label for="payePar">Payé par</label>
+   <select id="payePar">
+  <option value="">Choisir une personne</option>
+  <option value="Fabi">Fabi</option>
+  <option value="Gilbert">Gilbert</option>
+  <option value="Nous 2">Nous 2</option>
+  <option value="Autres">Autres</option>
+</select>
+ <label class="case-ticket" for="recuTicket"><input id="recuTicket" type="checkbox" checked> Reçu / Ticket disponible</label>
+ <label for="description">Description</label>
+<textarea id="description" rows="3"
+          placeholder="Ajouter une observation (facultatif)"></textarea>
+    <div class="actions">
+      <button type="button" class="retour"
+        onclick="annulerSaisie()">
+        Annuler
+      </button>
+      <button type="submit" class="enregistrer">
+        Enregistrer
+      </button>
+    </div>
+  </form>
+</section>
+
+<section id="recapEspagne" class="page">
+  <nav class="navigation-fixe" aria-label="Navigation rapide">
+    <button type="button" class="retour" onclick="retourAccueil()">⌂ Accueil</button>
+    <button type="button" class="nouvelle-rapide" onclick="nouvelleOperation()">＋ Nouvelle opération</button>
+  </nav>
+
+  <small>P360 MOBILE · ESPAGNE</small>
+
+  <h2>✅ Opération enregistrée</h2>
+
+  <p>Votre dépense par carte bancaire a bien été enregistrée.</p>
+
+  <div id="detailsRecapEspagne">
+    <p>Montant de l'opération : —</p>
+    <p>Total des dépenses du mois : —</p>
+    <p>Disponible sur le plafond : —</p>
+  </div>
+
+  <div class="actions">
+    <button class="retour"
+      onclick="afficher('accueil')">
+      Retour à l'accueil
+    </button>
+  </div>
+</section>
+
+<section id="espagne" class="page">
+  <small>P360 MOBILE · ESPAGNE</small>
+  <h2>💳 Suivi CB Espagne</h2>
+
+  <p>Plafond mensuel de la carte bancaire</p>
+
+  <h1 id="plafondEspagne">1 000 €</h1>
+<button type="button" onclick="modifierPlafondEspagne()">
+  ✏️ Modifier le plafond
+</button>
+  <div id="suiviEspagne">
+    <p>Dépenses du mois : calcul à venir</p>
+    <p>Disponible : calcul à venir</p>
+  </div>
+
+  <p>
+    🔔 Alertes automatiques à 80 % et 90 % du plafond.
+  </p>
+
+  <div class="actions">
+    <button class="retour"
+      onclick="afficher('accueil')">
+      Retour à l'accueil
+    </button>
+  </div>
+</section>
+
+
+<section id="attente" class="page">
+  <nav class="navigation-fixe" aria-label="Navigation rapide">
+    <button type="button" class="retour" onclick="retourAccueil()">⌂ Accueil</button>
+    <button type="button" class="nouvelle-rapide" onclick="nouvelleOperation()">＋ Nouvelle opération</button>
+  </nav>
+
+  <small>P360 MOBILE</small>
+  <h2>Opérations en attente</h2>
+  <p id="compteur"></p>
+  <p id="totalAttente" class="total-attente" aria-live="polite"></p>
+  <div id="liste"></div>
+  <div class="actions">
+    <button class="retour"
+      onclick="afficher('accueil')">
+      Retour à l'accueil
+    </button>
+  </div>
+</section>
+
+</main>
+
+<script>
+const CLE = "p360_mobile_operations_test";
+let operationEnModification = null;
+const $ = id => document.getElementById(id);
+function importerSauvegarde() {
+  const selecteur = document.createElement("input");
+  selecteur.type = "file";
+  selecteur.accept = ".json,application/json";
+
+  selecteur.addEventListener("change", function () {
+    const fichier = selecteur.files[0];
+
+   if (fichier) {
+  fichier.text().then(function (contenu) {
+    try {
+      const sauvegarde = JSON.parse(contenu);
+
+      if (
+        sauvegarde.application !== "P360 Mobile" ||
+        !Array.isArray(sauvegarde.operations)
+      ) {
+        alert("Ce fichier n'est pas une sauvegarde P360 valide.");
+        return;
+      }
+const comptesAutorises = [
+  "Courant", "Joint", "Espagne",
+  "Blois", "Orléans", "Oney"
+];
+
+const dateValide = date =>
+  typeof date === "string" &&
+  /^\d{4}-\d{2}-\d{2}$/.test(date) &&
+  !Number.isNaN(Date.parse(date)) &&
+  new Date(date + "T12:00:00").toISOString().slice(0, 10) === date;
+
+const operationsValides = sauvegarde.operations.every(op =>
+  op !== null &&
+  typeof op === "object" &&
+  !Array.isArray(op) &&
+  typeof op.id === "string" &&
+  op.id.trim() !== "" &&
+  comptesAutorises.includes(op.compte) &&
+  ["debit", "credit"].includes(op.type) &&
+  typeof op.montant === "number" &&
+  Number.isFinite(op.montant) &&
+  op.montant > 0 &&
+  dateValide(op.date) &&
+  typeof op.tiers === "string" &&
+  typeof op.categorie === "string" &&
+  typeof op.paiement === "string" &&
+  typeof op.payePar === "string"
+);
+
+if (!operationsValides) {
+  alert("Sauvegarde refusée : certaines opérations sont invalides.");
+  return;
+}
+const identifiantsSauvegarde = sauvegarde.operations.map(op => op.id);
+
+if (new Set(identifiantsSauvegarde).size !== identifiantsSauvegarde.length) {
+  alert("Sauvegarde refusée : des identifiants sont en double dans le fichier.");
+  return;
+}
+const operationsExistantes = lireOperations();
+const identifiantsExistants = new Set(operationsExistantes.map(op => op.id));
+const operationsNouvelles = sauvegarde.operations.filter(op => !identifiantsExistants.has(op.id));
+   alert(
+  "Sauvegarde reconnue !\n" +
+  "Nombre d'opérations dans le fichier : " + sauvegarde.operations.length + "\n" +
+  "Opérations nouvelles : " + operationsNouvelles.length
+); 
+ if (operationsNouvelles.length === 0) {
+  alert("Toutes les opérations sont déjà présentes. Aucun import nécessaire.");
+  return;
+}
+
+const confirmation = confirm(
+  "Voulez-vous restaurer " + operationsNouvelles.length +
+  " opération(s) manquante(s) ?"
+);
+
+if (!confirmation) {
+  alert("Restauration annulée. Aucune donnée modifiée.");
+  return;
+} 
+try {
+  const operationsFusionnees = [
+    ...operationsExistantes,
+    ...operationsNouvelles
+  ];
+
+  localStorage.setItem(
+    CLE,
+    JSON.stringify(operationsFusionnees)
+  );
+
+  alert(
+    "Restauration réussie !\n" +
+    operationsNouvelles.length + " opération(s) ajoutée(s)."
+  );
+} catch (erreur) {
+  alert("Erreur : la restauration n'a pas pu être enregistrée.");
+}
+    } catch (erreur) {
+      alert("Impossible de lire ce fichier JSON.");
+    }
+    }).catch(function () {
+    alert("Impossible d'ouvrir ce fichier.");
+  });
+  }
+
+  });
+
+  selecteur.click();
+}
+function exporterSauvegarde() {
+  const operations = lireOperations();
+
+  if (operations.length === 0) {
+    alert("Aucune opération à sauvegarder.");
+    return;
+  }
+
+  const sauvegarde = {
+    application: "P360 Mobile",
+    version: 1,
+    dateExport: new Date().toISOString(),
+    operations: operations
+  };
+
+  const contenu = JSON.stringify(sauvegarde, null, 2);
+  const fichier = new Blob([contenu], {
+    type: "application/json"
+  });
+
+  const lien = document.createElement("a");
+  lien.href = URL.createObjectURL(fichier);
+  lien.download = "P360_Sauvegarde_" +
+    new Date().toISOString().slice(0, 10) + ".json";
+
+  document.body.appendChild(lien);
+  lien.click();
+  lien.remove();
+
+  setTimeout(() => URL.revokeObjectURL(lien.href), 1000);
+}
+
+function exporterVersExcel() {
+  const operations = lireOperations().filter(
+    op => op.statut === "en_attente"
+  );
+
+  if (operations.length === 0) {
+    alert("Aucune opération en attente à exporter.");
+    return;
+  }
+
+  const colonnes = [
+    "Identifiant",
+    "Compte",
+    "Date",
+    "Type",
+    "Tiers",
+    "Catégorie",
+    "Montant",
+    "Mode de paiement",
+    "Payé par",
+    "Description",
+    "Statut",
+    "Reçu / Ticket"
+  ];
+
+  const echapperCSV = valeur => {
+    const texte = String(valeur ?? "");
+    return '"' + texte.replace(/"/g, '""') + '"';
+  };
+
+  const lignes = [
+    colonnes.map(echapperCSV).join(";"),
+    ...operations.map(op => [
+      op.id,
+      op.compte,
+      op.date,
+      op.type,
+      op.tiers,
+      op.categorie,
+      op.montant.toString().replace(".", ","),
+      op.paiement,
+      op.payePar,
+      op.description || "",
+      op.statut,
+      op.recuTicket === true ? "Oui" : op.recuTicket === false ? "Non" : "Non renseigné"
+    ].map(echapperCSV).join(";"))
+  ];
+
+  const contenu = "\uFEFF" + lignes.join("\r\n");
+
+  const fichier = new Blob([contenu], {
+    type: "text/csv;charset=utf-8;"
+  });
+
+  const lien = document.createElement("a");
+  lien.href = URL.createObjectURL(fichier);
+  lien.download = "P360_Export_Excel_" +
+    new Date().toISOString().slice(0, 10) + ".csv";
+
+  document.body.appendChild(lien);
+  lien.click();
+  lien.remove();
+
+  setTimeout(() => URL.revokeObjectURL(lien.href), 1000);
+
+  alert(
+    operations.length +
+    " opération(s) en attente exportée(s) vers Excel."
+  );
+}
+
+const CLE_SYNC = "p360_synchronisation_test_v1";
+const CLE_AJUSTEMENTS = "p360_ajustements_manuels_v1";
+let compteAffiche = null;
+
+function lireAjustements() {
+  try {
+    const valeur = JSON.parse(localStorage.getItem(CLE_AJUSTEMENTS) || "{}");
+    return valeur && typeof valeur === "object" && !Array.isArray(valeur) ? valeur : {};
+  } catch { return {}; }
+}
+function montantEuro(n) {
+  return n.toLocaleString("fr-FR", {style: "currency", currency: "EUR"});
+}
+function enregistrerAjustementCompte() {
+  if (!compteAffiche) return;
+  const saisie = $("ajustementCompte").value.trim().replace(/\s/g, "").replace(/\u2212/g, "-").replace(",", ".");
+  if (!/^[+-]?(?:\d+(?:\.\d{1,2})?|\.\d{1,2})$/.test(saisie)) {
+    alert("Saisis un montant valide, par exemple -643,05 ou 25,00.");
+    return;
+  }
+  const montant = Math.round(Number(saisie) * 100) / 100;
+  if (!Number.isFinite(montant)) return;
+  const ajustements = lireAjustements();
+  ajustements[compteAffiche] = montant;
+  try { localStorage.setItem(CLE_AJUSTEMENTS, JSON.stringify(ajustements)); }
+  catch { alert("Impossible d'enregistrer l'ajustement."); return; }
+  ouvrirCompte(compteAffiche);
+}
+function reinitialiserAjustementCompte() {
+  if (!compteAffiche) return;
+  $("ajustementCompte").value = "0";
+  enregistrerAjustementCompte();
+}
+function adapterPayeurAuCompte() {
+  if ($("compte").value === "Joint") $("payePar").value = "Nous 2";
+}
+$("compte").addEventListener("change", adapterPayeurAuCompte);
+
+function lireSynchronisation() {
+  try { return JSON.parse(localStorage.getItem(CLE_SYNC)) || null; }
+  catch { return null; }
+}
+
+// CSV Excel: 7 champs, guillemets doubles, point-virgule, accents UTF-8.
+function analyserLigneCSV(ligne) {
+  const champs = [];
+  let texte = "", guillemets = false;
+  for (let i = 0; i < ligne.length; i++) {
+    const c = ligne[i];
+    if (c === '"') {
+      if (guillemets && ligne[i + 1] === '"') { texte += '"'; i++; }
+      else if (!guillemets && texte !== "") throw Error("Guillemets CSV invalides");
+      else guillemets = !guillemets;
+    } else if (c === ";" && !guillemets) {
+      champs.push(texte); texte = "";
+    } else { texte += c; }
+  }
+  if (guillemets) throw Error("Guillemets CSV non fermes");
+  champs.push(texte);
+  return champs;
+}
+
+function importerSynchronisationP360() {
+  const selecteur = document.createElement("input");
+  selecteur.type = "file";
+  selecteur.accept = ".csv,text/csv";
+  selecteur.addEventListener("change", async () => {
+    const fichier = selecteur.files[0];
+    if (!fichier) return;
+    try {
+      const contenu = (await fichier.text()).replace(/^\uFEFF/, "").trim();
+      const lignes = contenu.split(/\r?\n/).filter(l => l.trim());
+      if (lignes.shift() !== "Type;Compte;Identifiant;Date;Montant;Statut;Solde") {
+        throw Error("En-tete de synchronisation incorrect");
+      }
+      const comptes = ["Courant", "Joint", "Espagne", "Blois", "Orléans", "Oney"];
+      const soldes = {}, confirmations = new Set(), cb = [], idsCB = new Set();
+      const nombre = v => {
+        if (!/^-?\d+(?:\.\d+)?$/.test(v)) throw Error("Montant non numerique : " + v);
+        const n = Number(v);
+        if (!Number.isFinite(n)) throw Error("Montant invalide");
+        return n;
+      };
+      for (const ligne of lignes) {
+        const v = analyserLigneCSV(ligne);
+        if (v.length !== 7) throw Error("Ligne de synchronisation invalide");
+        const [type, compte, id, date, montant, statut, solde] = v;
+        if (!comptes.includes(compte)) throw Error("Compte inconnu : " + compte);
+        if (type === "SOLDE") {
+          if (Object.hasOwn(soldes, compte)) throw Error("Solde en double : " + compte);
+          soldes[compte] = nombre(solde);
+        } else if (type === "CONFIRMATION") {
+          if (!id || statut !== "importe" || confirmations.has(id)) throw Error("Confirmation invalide ou en double");
+          confirmations.add(id);
+        } else if (type === "CB") {
+          if (compte !== "Espagne" || !id || idsCB.has(id) || !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+              !["EN_ATTENTE", "RAPPROCHE"].includes(statut)) throw Error("Ligne CB invalide");
+          idsCB.add(id);
+          cb.push({id, date, montant: nombre(montant), statut});
+        } else throw Error("Type de ligne inconnu : " + type);
+      }
+      if (Object.keys(soldes).length !== 6) throw Error("Les six soldes sont obligatoires");
+      const operations = lireOperations();
+      const nb = operations.filter(op => confirmations.has(op.id) && op.statut === "en_attente").length;
+      if (!confirm("Synchronisation reconnue :\n6 soldes, " + confirmations.size +
+          " confirmations, " + cb.length + " lignes CB Espagne.\n" + nb +
+          " operation(s) a confirmer sur cet iPhone.\n\nAppliquer la synchronisation ?")) return;
+      // Sauvegarde de secours dans le meme stockage avant toute actualisation.
+      const precedent = localStorage.getItem(CLE);
+      const ancienneSync = localStorage.getItem(CLE_SYNC);
+      const anciensAjustements = localStorage.getItem(CLE_AJUSTEMENTS);
+      const actualisees = operations.map(op => confirmations.has(op.id) && op.statut === "en_attente"
+        ? {...op, statut: "importe", dateConfirmationImport: new Date().toISOString()} : op);
+      try {
+        localStorage.setItem(CLE, JSON.stringify(actualisees));
+        localStorage.setItem(CLE_SYNC, JSON.stringify({soldes, cb, dateSynchronisation: new Date().toISOString()}));
+        // Une nouvelle synchronisation invalide les corrections de l'ancien solde Excel.
+        localStorage.removeItem(CLE_AJUSTEMENTS);
+      } catch (e) {
+        try {
+          if (precedent === null) localStorage.removeItem(CLE); else localStorage.setItem(CLE, precedent);
+          if (ancienneSync === null) localStorage.removeItem(CLE_SYNC); else localStorage.setItem(CLE_SYNC, ancienneSync);
+          if (anciensAjustements === null) localStorage.removeItem(CLE_AJUSTEMENTS);
+          else localStorage.setItem(CLE_AJUSTEMENTS, anciensAjustements);
+        } catch (_) {}
+        throw Error("Stockage impossible ; restauration tentee");
+      }
+      alert("Synchronisation terminee. " + nb + " operation(s) confirmee(s). Aucune operation supprimee.");
+      afficher("menuTransferts");
+    } catch (erreur) { alert("Synchronisation refusee : " + erreur.message); }
+  });
+  selecteur.click();
+}
+
+function ouvrirCompte(nomCompte) {
+  compteAffiche = nomCompte;
+  const operations = lireOperations().filter(op => op.compte === nomCompte && op.statut === "en_attente")
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const sync = lireSynchronisation();
+  $("titreCompte").textContent = "Compte " + nomCompte;
+  const euro = montantEuro;
+  const resume = $("resumeCompte");
+  resume.replaceChildren();
+  const zone = $("zoneAjustement");
+  function ligne(texte, valeur, resultat = false) {
+    const p = document.createElement("p");
+    p.className = "resume-solde" + (resultat ? " resultat" : "");
+    p.textContent = texte + " : " + valeur;
+    resume.appendChild(p);
+  }
+  if (sync && sync.soldes && Object.hasOwn(sync.soldes, nomCompte)) {
+    const solde = Number(sync.soldes[nomCompte]);
+    const ajustement = Number(lireAjustements()[nomCompte]) || 0;
+    const attente = operations.reduce((s, op) => s + (op.type === "debit" ? -op.montant : op.montant), 0);
+    ligne("Solde synchronisé Excel", euro(solde));
+    ligne("Ajustement manuel", (ajustement > 0 ? "+" : "") + euro(ajustement));
+    ligne("Solde corrigé", euro(solde + ajustement), true);
+    ligne("Opérations iPhone en attente (" + operations.length + ")", euro(attente));
+    ligne("Solde estimé après opérations en attente", euro(solde + ajustement + attente), true);
+    $("ajustementCompte").value = String(ajustement).replace(".", ",");
+    zone.hidden = false;
+  } else {
+    ligne("Opérations en attente", String(operations.length));
+    ligne("Solde Excel", "non encore synchronisé");
+    zone.hidden = true;
+  }
+const liste = $("listeCompte");
+  liste.replaceChildren();
+  if (!operations.length) {
+    const message = document.createElement("p");
+    message.textContent = "Aucune operation en attente.";
+    liste.appendChild(message);
+  }
+  operations.slice(0, 20).forEach(op => {
+    const bloc = document.createElement("div"); bloc.className = "operation";
+    const titre = document.createElement("strong"); titre.textContent = op.tiers;
+    const details = document.createElement("span");
+    details.textContent = op.date + " · " + op.categorie + " · En attente" +
+      (op.description ? " · " + op.description : "") +
+      " · Ticket : " + (op.recuTicket === true ? "Oui" : op.recuTicket === false ? "Non" : "Non renseigné");
+    const montant = document.createElement("div");
+    montant.className = "montant " + (op.type === "debit" ? "debit" : "credit");
+    montant.textContent = (op.type === "debit" ? "−" : "+") + euro(op.montant);
+    bloc.append(titre, details, montant); liste.appendChild(bloc);
+  });
+  afficher("detailCompte");
+}
+
+function lireOperations() {
+  try {
+    return JSON.parse(localStorage.getItem(CLE)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function annulerSaisie() {
+  operationEnModification = null;
+  $("formulaire").reset();
+  $("date").value = dateLocale();
+  $("type").value = "debit";
+  afficher("accueil");
+}
+
+function retourAccueil() {
+  // La navigation n'efface jamais les opérations déjà enregistrées.
+  afficher("accueil");
+}
+
+function nouvelleOperation() {
+  operationEnModification = null;
+  $("formulaire").reset();
+  $("date").value = dateLocale();
+  $("type").value = "debit";
+  afficher("saisie");
+}
+
+function afficher(page) {
+  document.querySelectorAll(".page").forEach(
+    element => element.classList.remove("active")
+  );
+  $(page).classList.add("active");
+  window.scrollTo(0, 0);
+
+  if (page === "saisie") {
+  $("date").value ||= dateLocale();
+
+  if (operationEnModification === null) {
+    $("compte").value =
+      localStorage.getItem("p360_dernier_compte") || "Courant";
+  }
+}
+   
+  
+
+  if (page === "attente") afficherOperations();
+  if (page === "espagne") calculerCBEspagne();
+}
+
+function dateLocale() {
+  const d = new Date();
+  const annee = d.getFullYear();
+  const mois = String(d.getMonth() + 1).padStart(2, "0");
+  const jour = String(d.getDate()).padStart(2, "0");
+  return `${annee}-${mois}-${jour}`;
+}
+
+function afficherOperations() {
+  const operations = lireOperations().filter(
+  op => op.statut === "en_attente"
+);
+  $("compteur").textContent =
+    `${operations.length} opération(s) enregistrée(s)`;
+
+  // Solde informatif : débits négatifs, crédits positifs.
+  // Ne change ni les opérations, ni les soldes des comptes.
+  const totalCentimes = operations.reduce((total, op) =>
+    total + (op.type === "debit" ? -1 : 1) * Math.round(op.montant * 100), 0);
+  $("totalAttente").replaceChildren();
+  const texteTotal = document.createElement("span");
+  texteTotal.textContent = "Total net en attente : " + montantEuro(totalCentimes / 100);
+  const noteTotal = document.createElement("small");
+  noteTotal.textContent = "Information uniquement · crédits moins débits · tous comptes confondus";
+  $("totalAttente").append(texteTotal, noteTotal);
+
+  $("liste").replaceChildren();
+
+  operations.slice().reverse().forEach(op => {
+    const bloc = document.createElement("div");
+    bloc.className = "operation";
+
+    const titre = document.createElement("strong");
+    titre.textContent = op.tiers;
+
+    const details = document.createElement("span");
+    details.textContent =
+      `${op.date} · ${op.compte} · ${op.categorie}`;
+
+    const montant = document.createElement("div");
+    montant.className =
+      "montant " + (op.type === "debit" ? "debit" : "credit");
+    montant.textContent =
+      (op.type === "debit" ? "−" : "+") +
+      op.montant.toFixed(2).replace(".", ",") + " €";
+if (op.description) {
+  details.textContent +=
+    " · " + op.description;
+}
+details.textContent += " · Ticket : " + (op.recuTicket === true ? "Oui" : op.recuTicket === false ? "Non" : "Non renseigné");
+    
+const boutons = document.createElement("div");
+boutons.className = "actions";
+
+const modifier = document.createElement("button");
+modifier.textContent = "✏️ Modifier";
+modifier.className = "retour";
+modifier.onclick = () => modifierOperation(op.id);
+
+const supprimer = document.createElement("button");
+supprimer.textContent = "🗑️ Supprimer";
+supprimer.className = "retour";
+supprimer.onclick = () => supprimerOperation(op.id);
+
+boutons.append(modifier, supprimer);
+bloc.append(titre, details, montant, boutons);
+
+    $("liste").append(bloc);
+  });
+}
+
+
+
+function supprimerOperation(id) {
+  const operations = lireOperations();
+  const operation = operations.find(op => op.id === id);
+
+  if (!operation) return;
+if (operation.statut === "importe") {
+  alert(
+    "Cette opération a déjà été importée dans Excel.\n" +
+    "Elle ne peut plus être supprimée depuis P360 Mobile."
+  );
+  return;
+}
+  const confirmation = confirm(
+    "Souhaites-tu vraiment supprimer cette transaction ?"
+  );
+
+  if (!confirmation) return;
+
+  const nouvellesOperations = operations.filter(
+    op => op.id !== id
+  );
+
+  localStorage.setItem(
+    CLE,
+    JSON.stringify(nouvellesOperations)
+  );
+
+  afficherOperations();
+}
+
+function modifierOperation(id) {
+  const operations = lireOperations();
+  const operation = operations.find(op => op.id === id);
+
+  if (!operation) return;
+  if (operation.statut === "importe") {
+  alert(
+    "Cette opération a déjà été importée dans Excel.\n" +
+    "Elle ne peut plus être modifiée depuis P360 Mobile."
+  );
+  return;
+}
+  operationEnModification = id;
+
+  $("compte").value = operation.compte;
+  $("type").value = operation.type;
+  $("montant").value = operation.montant;
+  $("date").value = operation.date;
+  $("tiers").value = operation.tiers;
+  $("categorie").value = operation.categorie;
+  $("paiement").value = operation.paiement;
+  $("payePar").value = operation.payePar;
+  $("description").value = operation.description || "";
+  $("recuTicket").checked = operation.recuTicket === true;
+  alert(
+    "Les informations sont chargées dans le formulaire. " +
+    "Nous allons maintenant préparer leur enregistrement."
+  );
+
+  afficher("saisie");
+}
+ 
+function afficherRecapEspagne(operation) {
+  const operations = lireOperations();
+  const mois = operation.date.slice(0, 7);
+
+  const sync = lireSynchronisation();
+  const idsExcel = new Set((sync?.cb || []).map(op => op.id));
+  const total = operations.filter(op => op.compte === "Espagne" &&
+      op.paiement === "Carte Bancaire" && op.statut === "en_attente" &&
+      op.date.startsWith(mois) && !idsExcel.has(op.id))
+    .reduce((somme, op) => somme + (op.type === "debit" ? op.montant : -op.montant), 0)
+    + (sync?.cb || []).filter(op => op.date.startsWith(mois))
+      .reduce((somme, op) => somme + op.montant, 0);
+
+  const plafond = Number(localStorage.getItem("p360_plafond_espagne")) || 1000;
+  const disponible = plafond - total;
+
+  const euros = valeur =>
+    valeur.toLocaleString("fr-FR", {
+      style: "currency",
+      currency: "EUR"
+    });
+
+  let alerte = "🟢 Plafond sous surveillance.";
+
+  if (total > plafond) {
+    alerte = "🔴 Attention : plafond dépassé !";
+  } else if (total >= plafond * 0.90) {
+    alerte = "🟠 Seuil de 90 % du plafond atteint !";
+  } else if (total >= plafond * 0.80) {
+    alerte = "🟡 Seuil de 80 % du plafond atteint !";
+  }
+
+  const zone = $("detailsRecapEspagne");
+  zone.replaceChildren();
+
+  [
+    "Montant de l'opération : " + euros(operation.montant),
+    "Dépenses du mois : " + euros(total),
+    "Disponible estimé : " + euros(disponible),
+    alerte
+  ].forEach(texte => {
+    const ligne = document.createElement("p");
+    ligne.textContent = texte;
+    zone.append(ligne);
+  });
+
+  afficher("recapEspagne");
+}
+function modifierPlafondEspagne() {
+  const plafondActuel =
+    Number(localStorage.getItem("p360_plafond_espagne")) || 1000;
+
+  const saisie = prompt(
+    "Nouveau plafond mensuel de la CB Espagne (en euros) :",
+    plafondActuel
+  );
+
+  if (saisie === null) return;
+
+  const nouveauPlafond = Number(
+    saisie.trim().replace(/\s/g, "").replace(",", ".")
+  );
+
+  if (!Number.isFinite(nouveauPlafond) || nouveauPlafond <= 0) {
+    alert("Merci de saisir un montant valide supérieur à zéro.");
+    return;
+  }
+
+  localStorage.setItem("p360_plafond_espagne", nouveauPlafond);
+  calculerCBEspagne();
+
+  alert("Nouveau plafond enregistré : " +
+    nouveauPlafond.toLocaleString("fr-FR") + " €");
+}
+function calculerCBEspagne() {
+  const operations = lireOperations();
+  const sync = lireSynchronisation();
+  const maintenant = new Date();
+  const mois = maintenant.getFullYear() + "-" + String(maintenant.getMonth() + 1).padStart(2, "0");
+  const localCB = operations.filter(op => op.compte === "Espagne" &&
+    op.paiement.toLowerCase() === "carte bancaire" && op.statut === "en_attente");
+  const cbExcel = sync?.cb || [];
+  const idsExcel = new Set(cbExcel.map(op => op.id));
+  const cbMois = cbExcel.filter(op => op.date.startsWith(mois))
+    .reduce((s, op) => s + op.montant, 0);
+  const cbLocalMois = localCB.filter(op => op.date.startsWith(mois) && !idsExcel.has(op.id))
+    .reduce((s, op) => s + (op.type === "debit" ? op.montant : -op.montant), 0);
+  const depenses = cbMois + cbLocalMois;
+  const plafond = Number(localStorage.getItem("p360_plafond_espagne")) || 1000;
+  const euro = n => n.toLocaleString("fr-FR", {style:"currency",currency:"EUR"});
+  $("plafondEspagne").textContent = euro(plafond);
+  const zone = $("suiviEspagne"); zone.replaceChildren();
+  const attenteExcel = cbExcel.filter(op => op.statut === "EN_ATTENTE");
+  const encours = attenteExcel.reduce((s, op) => s + op.montant, 0) +
+    localCB.filter(op => !idsExcel.has(op.id))
+      .reduce((s, op) => s + (op.type === "debit" ? op.montant : -op.montant), 0);
+  const lignes = [
+    "Depenses du mois (Excel + iPhone) : " + euro(depenses),
+    "Disponible estime sur le plafond : " + euro(plafond - depenses),
+    "Encours CB non rapproche estime : " + euro(encours),
+    "Operations CB Excel en attente : " + attenteExcel.length,
+    "Operations CB iPhone en attente de transfert : " + localCB.length,
+    depenses > plafond ? "🔴 Plafond depasse" : depenses >= plafond * .9 ? "🟠 Seuil 90 %" : depenses >= plafond * .8 ? "🟡 Seuil 80 %" : "🟢 Plafond sous surveillance"
+  ];
+  lignes.forEach(t => { const p = document.createElement("p"); p.textContent = t; zone.append(p); });
+  const parMois = {};
+  attenteExcel.forEach(op => { (parMois[op.date.slice(0,7)] ||= []).push(op); });
+  Object.keys(parMois).sort().reverse().forEach(m => {
+    const titre = document.createElement("h3"); titre.textContent = "CB non rapprochee · " + m; zone.append(titre);
+    parMois[m].forEach(op => {
+      const p = document.createElement("p"); p.textContent = op.date + " · " + euro(op.montant); zone.append(p);
+    });
+  });
+}
+
+  function messageTest() {
+  alert("Cette rubrique sera développée prochainement.");
+}
+
+
+
+$("formulaire").addEventListener("submit", evenement => {
+  evenement.preventDefault();
+
+
+  const montant = Number($("montant").value);
+
+  if (!Number.isFinite(montant) || montant <= 0) {
+    alert("Saisis un montant valide.");
+    return;
+  }
+
+  const operation = {
+    
+id: "Appli-" + Date.now() + "-" + Math.random().toString(36).slice(2),
+
+    compte: $("compte").value,
+    type: $("type").value,
+    montant: montant,
+    date: $("date").value,
+    tiers: $("tiers").value.trim(),
+    categorie: $("categorie").value.trim(),
+    paiement: $("paiement").value,
+    payePar: $("payePar").value.trim(),
+     description: $("description").value.trim(),
+     recuTicket: $("recuTicket").checked,
+    statut: "en_attente"
+  };
+
+  const operations = lireOperations();
+
+if (
+  operation.compte === "Espagne" &&
+  operation.paiement === "Carte Bancaire" &&
+  operation.type === "debit"
+) {
+  const moisOperation = operation.date.slice(0, 7);
+
+  const totalActuel = operations
+    .filter(op =>
+      op.id !== operationEnModification &&
+      op.compte === "Espagne" &&
+      op.paiement === "Carte Bancaire" &&
+      op.date.startsWith(moisOperation)
+    )
+    .reduce((total, op) =>
+      total + (op.type === "debit" ? op.montant : -op.montant),
+      0
+    );
+
+  const nouveauTotal = totalActuel + operation.montant;
+
+  const plafondEspagne = Number(localStorage.getItem("p360_plafond_espagne")) || 1000;
+  if (nouveauTotal > plafondEspagne) {
+    const continuer = confirm(
+      "⚠️ ATTENTION : PLAFOND CB ESPAGNE !\n\n" +
+      "Dépenses après cette opération : " +
+      nouveauTotal.toFixed(2) + " €\n" +
+      "Plafond mensuel : " + plafondEspagne.toLocaleString("fr-FR") + " €\n\n" +
+      "Veux-tu quand même enregistrer cette opération ?"
+    );
+
+    if (!continuer) {
+      
+  // Conserver la saisie si le dépassement du plafond est refusé.
+  return;
+}
+  }
+}
+
+
+if (operationEnModification !== null) {
+  const position = operations.findIndex(
+    op => op.id === operationEnModification
+  );
+
+  if (position === -1) {
+    alert("Opération introuvable. Modification annulée.");
+    return;
+  }
+
+  operation.id = operationEnModification;
+  operations[position] = operation;
+} else {
+  operations.push(operation);
+}
+
+  try {
+    localStorage.setItem(CLE, JSON.stringify(operations));
+    localStorage.setItem(
+      "p360_dernier_compte", operation.compte
+    );
+  } catch {
+    alert("Enregistrement impossible dans ce navigateur.");
+    return;
+  }
+
+  $("formulaire").reset();
+  operationEnModification = null;
+  $("date").value = dateLocale();
+  $("type").value = "debit";
+
+  if (
+  operation.compte === "Espagne" &&
+  operation.paiement === "Carte Bancaire" &&
+  operation.type === "debit"
+) {
+  afficherRecapEspagne(operation);
+} else {
+  alert("Opération enregistrée !");
+  afficher("attente");
+}
+ 
+});
+
+$("date").value = dateLocale();
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./service-worker.js")
+    .catch(erreur => {
+      console.log("Service worker non activé :", erreur);
+    });
+}
+</script>
+
+</body>
+</html>
